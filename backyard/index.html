@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Backyard — Sadapanna</title>
+  <meta name="description" content="The Backyard is where Sadapanna keeps the ideas we thought about but never built — each one with an honest note on why we passed." />
+  <link rel="canonical" href="https://sadapanna.com/backyard/" />
+  <meta name="theme-color" content="#ffffff" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Sadapanna" />
+  <meta property="og:title" content="The Backyard — Sadapanna" />
+  <meta property="og:description" content="Ideas we thought about but never built — each with an honest note on why we passed." />
+  <meta property="og:url" content="https://sadapanna.com/backyard/" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="The Backyard — Sadapanna" />
+  <meta name="twitter:description" content="Ideas we thought about but never built — each with an honest note on why we passed." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,500&family=Caveat:wght@600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="../styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a class="brand" href="/"><span class="brand-mark">✦</span>Sadapanna</a>
+      <nav class="site-nav">
+        <a class="nav-pill" href="/#projects">Projects</a>
+        <a class="nav-pill" href="/#about">About</a>
+        <a class="nav-pill" href="/#contact">Contact</a>
+      </nav>
+      <a class="btn btn-outline header-cta" href="/">Back home <span class="btn-arrow">↩</span></a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero hero-backyard">
+      <div class="container">
+        <span class="badge"><span class="badge-dot"></span>The Backyard</span>
+        <h1>
+          Ideas we <em class="hl hl-purple">didn't</em><br />
+          <em class="hl hl-yellow">build<svg class="squiggle" viewBox="0 0 120 14" aria-hidden="true"><path d="M3 10 Q 18 2, 33 8 T 63 8 T 93 8 T 117 6" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg></em>
+        </h1>
+        <p class="lede">Every studio has a pile of ideas that never made it. Most keep it hidden. This is ours — out in the backyard, with an honest note on each one about why we walked away.</p>
+        <div class="hash-pills" aria-hidden="true">
+          <span class="pill pill-lav">#shelved</span>
+          <span class="pill pill-yellow">#nobuild</span>
+          <span class="pill pill-purple">#honest</span>
+        </div>
+      </div>
+      <div class="doodle doodle-rings" aria-hidden="true"></div>
+      <div class="doodle doodle-dots" aria-hidden="true"></div>
+    </section>
+
+    <section class="section section-backyard">
+      <div class="container">
+        <div id="backyard-grid" class="cards yard-cards" aria-live="polite">
+          <p class="yard-loading">Digging up the backyard…</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-contact">
+      <div class="container">
+        <h2 class="section-title">Got one we <em class="hl hl-purple">should</em> reconsider?</h2>
+        <p class="section-sub">Sometimes a rejected idea just showed up at the wrong time. If you see one here worth another look, tell us.</p>
+        <a class="btn btn-primary btn-big" href="mailto:hello@sadapanna.com">hello@sadapanna.com <span class="btn-arrow">↗</span></a>
+      </div>
+      <div class="doodle doodle-rings doodle-rings-2" aria-hidden="true"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <span>© 2026 Sadapanna <span class="foot-mark">✦</span> made slowly</span>
+      <nav class="footer-links">
+        <a href="/privacy/">Privacy</a>
+        <a href="/terms/">Terms</a>
+        <a href="/backyard/">Backyard</a>
+        <a href="/#contact">Contact</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      var grid = document.getElementById("backyard-grid");
+
+      function esc(s) {
+        return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+          return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+        });
+      }
+
+      function accentName(name, accent) {
+        var safe = esc(name);
+        if (accent && name.indexOf(accent) !== -1) {
+          return safe.replace(esc(accent), "<em>" + esc(accent) + "</em>");
+        }
+        return safe;
+      }
+
+      function cardHTML(idea) {
+        return (
+          '<article class="card yard-card">' +
+            '<span class="yard-stamp">Shelved</span>' +
+            '<span class="card-badge">' + esc(idea.emoji || "💡") + "</span>" +
+            "<h3>" + accentName(idea.name, idea.accent) + "</h3>" +
+            '<p class="yard-tagline">' + esc(idea.tagline) + "</p>" +
+            '<p class="yard-pitch">' + esc(idea.pitch) + "</p>" +
+            '<div class="yard-reason">' +
+              '<span class="yard-reason-label">Why we passed</span>' +
+              "<p>" + esc(idea.reason) + "</p>" +
+            "</div>" +
+            '<div class="yard-meta">' +
+              '<span class="status status-dark">' + esc(idea.tag || "No thanks") + "</span>" +
+              (idea.year ? '<span class="yard-year">Shelved ' + esc(idea.year) + "</span>" : "") +
+            "</div>" +
+          "</article>"
+        );
+      }
+
+      fetch("ideas.json", { cache: "no-cache" })
+        .then(function (r) {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.json();
+        })
+        .then(function (data) {
+          var ideas = (data && data.ideas) || [];
+          if (!ideas.length) {
+            grid.innerHTML = '<p class="yard-loading">The backyard is empty for now — check back soon.</p>';
+            return;
+          }
+          grid.innerHTML = ideas.map(cardHTML).join("");
+        })
+        .catch(function () {
+          grid.innerHTML =
+            '<p class="yard-loading">Couldn\'t load the ideas here. If you\'re opening this file directly, run it through a local server — <code>ideas.json</code> needs to be fetched over http.</p>';
+        });
+    })();
+  </script>
+</body>
+</html>

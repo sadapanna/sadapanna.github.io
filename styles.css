@@ -553,6 +553,126 @@ a {
   font-weight: 600;
 }
 
+/* ---------- Backyard ---------- */
+.hero-backyard {
+  padding: 76px 0 40px;
+}
+
+.section-backyard {
+  padding-top: 40px;
+}
+
+.yard-cards {
+  margin-top: 0;
+}
+
+.yard-loading {
+  grid-column: 1 / -1;
+  color: var(--ink-soft);
+  font-size: 1rem;
+  text-align: center;
+  padding: 30px 0;
+}
+
+.yard-loading code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85em;
+  background: var(--lavender);
+  padding: 2px 7px;
+  border-radius: 6px;
+  color: var(--purple-deep);
+}
+
+.yard-card {
+  position: relative;
+  background: var(--lavender-soft);
+  border: 1.5px solid #e7e1fb;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.yard-card:hover {
+  transform: translateY(-6px) rotate(-0.4deg);
+}
+
+/* faded "shelved" rubber stamp in the corner */
+.yard-stamp {
+  position: absolute;
+  top: 22px;
+  right: -34px;
+  transform: rotate(12deg);
+  background: transparent;
+  color: var(--ink-soft);
+  border: 2px solid currentColor;
+  border-radius: 8px;
+  padding: 3px 40px;
+  font-family: var(--hand);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.yard-card .card-badge {
+  background: var(--white);
+  filter: grayscale(0.15);
+}
+
+.yard-tagline {
+  font-weight: 500;
+  color: var(--ink) !important;
+  margin-bottom: 14px;
+}
+
+.yard-pitch {
+  font-size: 0.92rem !important;
+}
+
+.yard-reason {
+  margin-top: 20px;
+  background: var(--white);
+  border-left: 4px solid var(--yellow);
+  border-radius: 0 14px 14px 0;
+  padding: 16px 18px;
+}
+
+.yard-reason-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--purple);
+  margin-bottom: 6px;
+}
+
+.yard-reason p {
+  color: var(--ink) !important;
+  font-size: 0.92rem !important;
+  line-height: 1.6;
+}
+
+.yard-meta {
+  margin-top: auto;
+  padding-top: 22px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.yard-meta .status {
+  margin-top: 0;
+}
+
+.yard-year {
+  font-family: var(--hand);
+  font-size: 1.05rem;
+  color: var(--ink-soft);
+}
+
 /* ---------- Footer ---------- */
 .site-footer {
   border-top: 1.5px solid #efecf9;
