@@ -866,6 +866,61 @@ a {
   color: var(--purple);
 }
 
+/* ---------- Page transitions ----------
+   Cross-document view transitions. A nice-to-have: browsers without the API
+   (Firefox, as of now) just navigate the old way, so nothing is load-bearing.
+   The whole feature sits inside the no-preference query — anyone asking for
+   reduced motion gets plain navigation rather than a shorter animation. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+
+  /* Only root gets moved. Naming a full-height element (the header, main)
+     would animate it from wherever it sat in the *old* scroll position —
+     click a footer link while scrolled down and the header flies in from
+     off-screen. Root is viewport-sized on both pages, so it can't drift. */
+  ::view-transition-old(root) {
+    animation: vt-page-out 180ms cubic-bezier(0.4, 0, 1, 1) both;
+  }
+
+  ::view-transition-new(root) {
+    animation: vt-page-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes vt-page-out {
+    to {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+  }
+
+  @keyframes vt-page-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+  }
+
+  /* Shared elements: the Arrow Flux card badge and status pill on the home
+     page morph into the hero icon and badge on /arrow-flux/, and back again.
+     A name may only appear once per page, hence the dedicated classes. */
+  .vt-flux-icon {
+    view-transition-name: flux-icon;
+  }
+
+  .vt-flux-status {
+    view-transition-name: flux-status;
+  }
+
+  /* Outrun the root fade slightly so the morph stays legible against it. */
+  ::view-transition-group(flux-icon),
+  ::view-transition-group(flux-status) {
+    animation-duration: 380ms;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 760px) {
   .hero {
