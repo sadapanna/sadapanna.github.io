@@ -323,11 +323,12 @@ a {
 }
 
 .hero-icon {
+  display: block;
   width: 96px;
   height: 96px;
   border-radius: 22px;
   box-shadow: 0 10px 28px rgba(29, 27, 38, 0.16);
-  margin-bottom: 24px;
+  margin: 0 auto 24px;
 }
 
 .hero h1 {
