@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>InkFlow — Sadapanna</title>
+<link rel="stylesheet" href="style.css?v=14">
+<link rel="icon" href="assets/logo.webp" type="image/webp">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <img class="brand-icon" src="assets/logo.webp" alt="Sadapanna">
+    <div>
+      <h1>InkFlow</h1>
+      <p>write it like magic — by sadapanna</p>
+    </div>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- ======================= CONTROLS ======================= -->
+  <aside class="panel">
+
+    <!-- 1 · what you're making -->
+    <section class="card">
+      <h2>Create</h2>
+
+      <div class="field">
+        <label for="text-input">Text</label>
+        <textarea id="text-input" rows="2" spellcheck="false">Hello</textarea>
+        <p id="missing-warn" class="warn" hidden></p>
+      </div>
+
+      <div class="field">
+        <label>Style</label>
+        <div class="mode-grid" id="mode-seg">
+          <button class="mode-btn mode-card active" data-mode="brush" aria-label="Brush style">
+            <div class="mode-mini" data-mini="brush"></div>
+          </button>
+          <button class="mode-btn mode-card" data-mode="outline" aria-label="Outline style">
+            <div class="mode-mini" data-mini="outline"></div>
+          </button>
+          <button class="mode-btn mode-card" data-mode="stroke" aria-label="Pen style">
+            <div class="mode-mini" data-mini="stroke"></div>
+          </button>
+        </div>
+        <p class="hint" id="mode-hint">painted with real brush strokes through each letter — works with any font</p>
+      </div>
+
+      <div id="outline-font-row" class="field">
+        <label for="font-select">Font</label>
+        <select id="font-select">
+          <option value="poppins">Poppins SemiBold (bundled)</option>
+          <option value="pacifico">Pacifico Script (bundled)</option>
+        </select>
+        <div class="dropzone" id="dropzone">
+          <input type="file" id="font-file" accept=".ttf,.otf,.woff" hidden>
+          <span>drop a <b>.ttf / .otf / .woff</b> here or <button class="linklike" id="browse-btn">browse…</button></span>
+        </div>
+      </div>
+
+      <div id="stroke-font-row" class="field" hidden>
+        <label for="hershey-select">Pen style</label>
+        <select id="hershey-select">
+          <option value="futural">Sans — single stroke</option>
+          <option value="futuram">Sans bold — double stroke</option>
+          <option value="scriptc" selected>Script — medium</option>
+          <option value="scripts">Script — fine</option>
+          <option value="cursive">Cursive</option>
+          <option value="timesr">Serif roman</option>
+          <option value="timesi">Serif italic</option>
+          <option value="timesrb">Serif bold</option>
+          <option value="gothiceng">Gothic — English</option>
+          <option value="gothicger">Gothic — German</option>
+          <option value="gothicita">Gothic — Italian</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- 2 · how it moves -->
+    <section class="card">
+      <h2>Motion</h2>
+
+      <div class="field">
+        <label for="easing">Easing</label>
+        <div class="easing-row">
+        <select id="easing">
+          <option>linear</option>
+          <option>ease</option>
+          <option>ease-in</option>
+          <option>ease-out</option>
+          <option selected>ease-in-out</option>
+          <option>ease-in-quad</option>
+          <option>ease-out-quad</option>
+          <option>ease-in-out-quad</option>
+          <option>ease-in-cubic</option>
+          <option>ease-out-cubic</option>
+          <option>ease-in-out-cubic</option>
+          <option>ease-in-expo</option>
+          <option>ease-out-expo</option>
+          <option>ease-in-out-expo</option>
+        </select>
+        <div class="ease-demo" title="how the selected easing moves">
+          <div class="ease-dot" id="ease-dot"></div>
+        </div>
+        </div>
+      </div>
+
+      <div class="field slider-field">
+        <label>Letter duration <output id="out-duration">0.8s</output></label>
+        <input type="range" id="letter-duration" min="0.1" max="3" step="0.05" value="0.8">
+      </div>
+
+      <div class="field slider-field">
+        <label>Letter overlap <output id="out-overlap">60%</output></label>
+        <input type="range" id="overlap" min="0" max="120" step="5" value="60">
+        <p class="hint">0% all at once · 100% one after another · 120% with a pause</p>
+      </div>
+
+      <div class="field">
+        <label>Letter timing</label>
+        <div class="seg" id="timing-seg">
+          <button class="seg-btn active" data-val="uniform">Uniform</button>
+          <button class="seg-btn" data-val="natural">Natural</button>
+        </div>
+        <p class="hint">natural = complex letters take longer, like real writing</p>
+      </div>
+
+      <details class="adv">
+        <summary>Advanced</summary>
+        <div class="row2">
+          <div class="field slider-field">
+            <label>End hold <output id="out-hold">0.5s</output></label>
+            <input type="range" id="hold" min="0" max="3" step="0.1" value="0.5">
+          </div>
+          <div class="field">
+            <label for="fps">FPS</label>
+            <select id="fps">
+              <option>24</option><option>30</option><option selected>60</option>
+            </select>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- 3 · how it looks -->
+    <section class="card">
+      <h2>Look</h2>
+
+      <div class="row2">
+        <div class="field" id="fill-color-field">
+          <label for="fill-color">Color</label>
+          <input type="color" id="fill-color" value="#111111">
+        </div>
+        <div class="field" id="stroke-color-field">
+          <label for="stroke-color">Stroke color</label>
+          <input type="color" id="stroke-color" value="#111111">
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="field slider-field">
+          <label>Font size <output id="out-fontsize">220</output></label>
+          <input type="range" id="font-size" min="60" max="500" step="10" value="220">
+        </div>
+        <div class="field slider-field">
+          <label>Line spacing <output id="out-linespacing">125%</output></label>
+          <input type="range" id="line-spacing" min="80" max="220" step="5" value="125">
+        </div>
+      </div>
+
+      <div class="field slider-field" id="brush-size-field">
+        <label>Brush size <output id="out-brushsize">130%</output></label>
+        <input type="range" id="brush-size" min="100" max="260" step="5" value="130">
+      </div>
+
+      <div class="field slider-field" id="stroke-width-field">
+        <label>Stroke width <output id="out-strokew">5</output></label>
+        <input type="range" id="stroke-width" min="1" max="30" step="0.5" value="5">
+      </div>
+
+      <div class="field">
+        <label>Background</label>
+        <div class="bg-row">
+          <div class="seg" id="bg-seg">
+            <button class="seg-btn active" data-val="transparent">Transparent</button>
+            <button class="seg-btn" data-val="color">Color</button>
+          </div>
+          <input type="color" id="bg-color" value="#ffffff" hidden>
+        </div>
+      </div>
+
+      <details class="adv" id="fill-controls">
+        <summary>Fill details</summary>
+        <div class="field">
+          <label>Fill</label>
+          <div class="seg" id="fill-seg">
+            <button class="seg-btn active" data-val="fade">Fade in</button>
+            <button class="seg-btn" data-val="none">None (outline only)</button>
+          </div>
+        </div>
+        <div class="row2" id="fill-timing">
+          <div class="field slider-field">
+            <label>Fill starts at <output id="out-fillstart">55%</output></label>
+            <input type="range" id="fill-start" min="0" max="100" step="5" value="55">
+          </div>
+          <div class="field slider-field">
+            <label>Fill fade length <output id="out-filldur">60%</output></label>
+            <input type="range" id="fill-duration" min="5" max="150" step="5" value="60">
+          </div>
+        </div>
+        <p class="hint">percentages of each letter's draw time</p>
+      </details>
+    </section>
+
+  </aside>
+
+  <!-- ======================= PREVIEW + EXPORT ======================= -->
+  <section class="preview-area">
+    <div class="stage-wrap">
+      <div class="stage checker" id="stage">
+        <div id="lottie-box"></div>
+      </div>
+    </div>
+
+    <div class="player card">
+      <button id="btn-play" class="btn icon" title="play / pause">⏸</button>
+      <button id="btn-restart" class="btn icon" title="restart">⟲</button>
+      <input type="range" id="scrub" min="0" max="100" step="1" value="0" class="scrub">
+      <span id="time-label" class="time">0.0 / 0.0s</span>
+      <label class="loop-label"><input type="checkbox" id="loop" checked> loop</label>
+      <label class="speed-label">speed
+        <input type="range" id="speed" min="0.1" max="3" step="0.1" value="1">
+        <span id="speed-label">1×</span>
+      </label>
+    </div>
+
+    <section class="card export-card">
+      <h2>Export</h2>
+      <div class="export-row">
+        <select id="export-format">
+          <option value="lottie" selected>Lottie · .json</option>
+          <option value="mp4">Video · .mp4</option>
+          <option value="gif">GIF · .gif</option>
+          <option value="webm">Transparent video · .webm</option>
+        </select>
+        <select id="export-scale" title="export resolution" hidden>
+          <option value="0.5">0.5×</option>
+          <option value="1" selected>1×</option>
+          <option value="2">2×</option>
+        </select>
+        <button id="btn-copy" class="btn ghost" title="Copy Lottie JSON to clipboard">Copy</button>
+        <button id="btn-export" class="btn primary">⬇ Download</button>
+      </div>
+      <div class="progress" id="export-progress"><div class="progress-bar" id="export-bar"></div></div>
+      <p class="export-status" id="export-status"></p>
+      <p class="hint" id="export-hint">tiny vector file — After Effects, web, iOS &amp; Android Lottie players</p>
+    </section>
+
+    <p class="file-info" id="file-info"></p>
+  </section>
+</main>
+
+<script src="vendor/opentype.min.js"></script>
+<script src="vendor/lottie.min.js"></script>
+<script src="vendor/gif.js"></script>
+<script src="vendor/mp4-muxer.min.js"></script>
+<script src="js/skeleton.js?v=6"></script>
+<script src="js/builder.js?v=6"></script>
+<script src="js/exporter.js?v=5"></script>
+<script src="js/app.js?v=13"></script>
+</body>
+</html>

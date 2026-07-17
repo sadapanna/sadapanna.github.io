@@ -1,0 +1,395 @@
+/* ============================================================
+   InkFlow — Sadapanna theme (playful purple & yellow)
+   Headings/body: Poppins · Accent: Caveat · Wordmark: Madimi One
+   ============================================================ */
+
+@font-face {
+  font-family: "Madimi One";
+  src: url("assets/madimi-one-latin.woff2") format("woff2");
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Poppins";
+  src: url("assets/poppins-400.woff2") format("woff2");
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Poppins";
+  src: url("assets/poppins-600.woff2") format("woff2");
+  font-weight: 600; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Caveat";
+  src: url("assets/caveat-600.woff2") format("woff2");
+  font-weight: 600 700; font-style: normal; font-display: swap;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --white: #ffffff;
+  --ink: #1d1b26;
+  --ink-soft: #5c5871;
+  --purple: #6b4eff;
+  --purple-deep: #5638e6;
+  --lavender: #e9e3ff;
+  --lavender-soft: #f4f1ff;
+  --yellow: #ffc736;
+  --yellow-soft: #ffe9ad;
+  --border: #e4defc;
+  --radius: 20px;
+  --radius-pill: 999px;
+  --sans: "Poppins", -apple-system, "Segoe UI", sans-serif;
+  --hand: "Caveat", "Comic Sans MS", cursive;
+  --brand: "Madimi One", "Poppins", sans-serif;
+  font-size: 15px;
+}
+
+body {
+  background: var(--lavender-soft);
+  color: var(--ink);
+  font-family: var(--sans);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: var(--yellow); color: var(--ink); }
+
+/* ---------- top bar ---------- */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 22px;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 50;
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-icon { width: 40px; height: 40px; border-radius: 12px; }
+.brand h1 {
+  font-family: var(--brand);
+  font-weight: 400;
+  font-size: 20px;
+  color: var(--purple-deep);
+  letter-spacing: .3px;
+  line-height: 1.15;
+}
+.brand p {
+  font-family: var(--hand);
+  font-size: 16px;
+  color: var(--ink-soft);
+  line-height: 1.1;
+}
+.topbar-actions { display: flex; gap: 10px; }
+
+/* ---------- buttons ---------- */
+.btn {
+  border: 2px solid var(--lavender);
+  background: var(--white);
+  color: var(--ink);
+  padding: 9px 18px;
+  border-radius: var(--radius-pill);
+  font-family: var(--sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform .12s, background .15s, border-color .15s, box-shadow .15s;
+}
+.btn:hover { border-color: var(--purple); transform: translateY(-1px); }
+.btn.primary {
+  background: var(--purple); border-color: var(--purple); color: #fff;
+  box-shadow: 0 6px 16px rgba(107, 78, 255, .28);
+}
+.btn.primary:hover { background: var(--purple-deep); border-color: var(--purple-deep); }
+.btn.ghost { background: transparent; }
+.btn.icon { padding: 8px 13px; font-size: 15px; line-height: 1; }
+.btn:disabled { opacity: .5; cursor: default; transform: none; }
+.linklike {
+  background: none; border: none; color: var(--purple);
+  cursor: pointer; font-size: inherit; font-family: inherit;
+  text-decoration: underline;
+}
+
+/* ---------- layout ---------- */
+.layout {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 18px;
+  padding: 18px 22px;
+  max-width: 1500px;
+  margin: 0 auto;
+  align-items: start;
+}
+/* (mobile layout rules live at the end of this file so they win the cascade) */
+
+.panel { display: flex; flex-direction: column; gap: 14px; }
+
+.card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: 0 4px 18px rgba(107, 78, 255, .06);
+}
+.card h2 {
+  font-size: 11.5px; text-transform: uppercase; letter-spacing: 1.6px;
+  color: var(--purple); margin-bottom: 12px; font-weight: 600;
+}
+
+/* ---------- fields ---------- */
+.field { margin-bottom: 12px; }
+.field:last-child { margin-bottom: 0; }
+.field > label {
+  display: flex; justify-content: flex-start; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--ink);
+}
+.field output {
+  color: var(--purple); font-weight: 700; font-size: 12.5px;
+  margin-left: auto; /* value stays right-aligned, reset dot sits after it */
+}
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+input[type="text"], textarea, select {
+  width: 100%;
+  background: var(--lavender-soft);
+  border: 2px solid transparent;
+  color: var(--ink);
+  border-radius: 12px;
+  padding: 9px 12px;
+  font-family: var(--sans);
+  font-size: 14px;
+  outline: none;
+  transition: border-color .15s, background .15s;
+}
+textarea { resize: vertical; min-height: 42px; line-height: 1.5; }
+input[type="text"]:focus, textarea:focus, select:focus { border-color: var(--purple); background: var(--white); }
+
+/* color inputs: the swatch IS the box — no border, no padding */
+input[type="color"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%; height: 38px;
+  border: none; padding: 0;
+  border-radius: 12px;
+  background: none;
+  cursor: pointer;
+  overflow: hidden;
+}
+input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+/* subtle inner border keeps the swatch visible when the color matches the page */
+input[type="color"]::-webkit-color-swatch {
+  border: 2px solid rgba(29, 27, 38, .12);
+  border-radius: 12px;
+}
+input[type="color"]::-moz-color-swatch {
+  border: 2px solid rgba(29, 27, 38, .12);
+  border-radius: 12px;
+}
+
+input[type="range"] { width: 100%; accent-color: var(--purple); cursor: pointer; }
+
+.hint { font-size: 11.5px; color: var(--ink-soft); margin-top: 5px; line-height: 1.5; }
+.warn {
+  font-size: 12px; color: #8a6100; margin-top: 6px;
+  background: var(--yellow-soft); border-radius: 8px; padding: 6px 10px;
+}
+
+/* ---------- mode switch: each card IS a looping demo of its style ------- */
+.mode-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.mode-card {
+  background: var(--lavender-soft);
+  border: 2px solid transparent;
+  border-radius: 14px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.mode-card:hover { border-color: var(--lavender); }
+.mode-card.active { border-color: var(--purple); background: var(--lavender); }
+.mode-mini {
+  height: 46px;
+  pointer-events: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.mode-mini svg { max-height: 100%; max-width: 100%; }
+
+/* ---------- segmented control ---------- */
+.seg {
+  display: flex; background: var(--lavender-soft);
+  border-radius: var(--radius-pill); overflow: hidden; padding: 3px; gap: 3px;
+}
+.seg-btn {
+  flex: 1 1 0; background: none; border: none; color: var(--ink-soft);
+  padding: 7px 6px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  font-family: var(--sans);
+  border-radius: var(--radius-pill);
+  text-align: center;
+  transition: background .15s, color .15s;
+}
+.seg-btn.active { background: var(--purple); color: #fff; }
+.seg-lg .seg-btn { padding: 10px 8px; font-size: 13.5px; }
+
+/* ---------- easing live preview ---------- */
+.easing-row { display: flex; gap: 10px; align-items: stretch; }
+.easing-row select { flex: 1; }
+.ease-demo {
+  flex: 0 0 84px;
+  background: var(--lavender-soft);
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+}
+.ease-dot {
+  position: absolute;
+  top: 50%; left: 10px;
+  width: 12px; height: 12px; margin-top: -6px;
+  border-radius: 50%;
+  background: var(--purple);
+  animation: easeDemo 1.8s infinite;
+}
+@keyframes easeDemo {
+  0%        { transform: translateX(0); }
+  65%, 100% { transform: translateX(52px); }
+}
+
+/* ---------- slider reset dot (DaVinci-style back-to-default) ---------- */
+.reset-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  border: none;
+  background: var(--yellow);
+  cursor: pointer;
+  margin-left: 8px;
+  padding: 0;
+  opacity: 0; pointer-events: none;
+  transition: opacity .15s, transform .12s;
+  flex: none;
+}
+.reset-dot.visible { opacity: 1; pointer-events: auto; }
+.reset-dot:hover { transform: scale(1.35); }
+
+/* ---------- collapsed advanced sections ---------- */
+details.adv { margin-top: 10px; }
+details.adv summary {
+  cursor: pointer;
+  font-size: 12.5px; font-weight: 600;
+  color: var(--purple);
+  padding: 6px 0;
+  list-style: none;
+  user-select: none;
+}
+details.adv summary::before { content: "▸ "; }
+details.adv[open] summary::before { content: "▾ "; }
+details.adv summary::-webkit-details-marker { display: none; }
+details.adv > *:not(summary) { margin-top: 8px; }
+
+.bg-row { display: flex; gap: 10px; align-items: center; }
+.bg-row .seg { flex: 1; }
+.bg-row input[type="color"] { width: 52px; flex: none; }
+
+/* ---------- dropzone ---------- */
+.dropzone {
+  margin-top: 8px;
+  border: 2px dashed var(--lavender);
+  border-radius: 14px;
+  padding: 14px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  transition: border-color .15s, background .15s;
+  line-height: 1.55;
+}
+.dropzone.dragover { border-color: var(--purple); background: var(--lavender-soft); }
+
+/* ---------- preview (sticky on wide screens: visible while tweaking) ----- */
+.preview-area { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+@media (min-width: 901px) {
+  .preview-area { position: sticky; top: 84px; }
+}
+.stage-wrap {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 300px;
+  max-height: 52vh;
+  box-shadow: 0 4px 18px rgba(107, 78, 255, .06);
+}
+.stage-wrap .stage { max-height: calc(52vh - 40px); }
+#lottie-box svg { max-height: calc(52vh - 40px); width: auto; }
+.stage {
+  border-radius: 12px;
+  max-width: 100%;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.stage.checker {
+  background-image:
+    linear-gradient(45deg, #e9e3ff99 25%, transparent 25%, transparent 75%, #e9e3ff99 75%),
+    linear-gradient(45deg, #e9e3ff99 25%, transparent 25%, transparent 75%, #e9e3ff99 75%);
+  background-color: #faf9ff;
+  background-size: 22px 22px;
+  background-position: 0 0, 11px 11px;
+}
+#lottie-box { max-width: 100%; }
+#lottie-box svg { display: block; max-width: 100%; height: auto; }
+
+/* ---------- player ---------- */
+.player {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 12px 16px;
+}
+.scrub { flex: 1; min-width: 140px; }
+.time { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.loop-label, .speed-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--ink-soft); white-space: nowrap;
+}
+.speed-label input { width: 90px; }
+#speed-label { color: var(--purple); font-weight: 700; min-width: 30px; }
+
+.file-info { font-size: 12px; color: var(--ink-soft); padding: 0 4px; }
+
+/* ---------- export card ---------- */
+.export-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.export-row select { flex: 1; min-width: 150px; }
+.export-row #export-scale { flex: 0 0 auto; width: 74px; min-width: 74px; }
+.progress {
+  height: 10px; border-radius: var(--radius-pill);
+  background: var(--lavender-soft); overflow: hidden; margin-top: 10px;
+  display: none;
+}
+.progress.active { display: block; }
+.progress-bar {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, var(--purple), var(--yellow));
+  border-radius: var(--radius-pill);
+  transition: width .15s;
+}
+.export-status { font-size: 12px; color: var(--ink-soft); margin-top: 6px; min-height: 16px; }
+
+/* ============================================================
+   Mobile (≤900px) — declared last so these always win the cascade
+   ============================================================ */
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; }
+
+  /* dissolve the preview wrapper so its children join the page grid —
+     that lets the stage stick for the WHOLE page scroll, not just its box */
+  .preview-area { display: contents; }
+  .stage-wrap { order: -3; }
+  .player { order: -2; }
+  .export-card { order: -1; }
+  .file-info { order: 1; }
+
+  /* the preview docks below the topbar like a mini-player, so every tweak
+     is visible instantly while the controls scroll underneath */
+  .stage-wrap {
+    position: sticky; top: 66px; z-index: 40;
+    min-height: 120px; max-height: 28vh;
+    padding: 10px;
+    box-shadow: 0 12px 28px rgba(29, 27, 38, .16);
+  }
+  .stage-wrap .stage { max-height: calc(28vh - 20px); }
+  #lottie-box svg { max-height: calc(28vh - 20px); }
+}
