@@ -3,21 +3,130 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>InkFlow — Sadapanna</title>
-<link rel="stylesheet" href="style.css?v=14">
+<title>InkFlow — Turn Any Font Into a Handwriting Animation | Sadapanna</title>
+<meta name="description" content="InkFlow turns any font and text into an animated write-on video or Lottie file — outline-and-fill or true handwriting stroke order, right in your browser. Export Lottie JSON, MP4, GIF, or WebM. Free, no upload, nothing leaves your device.">
+<link rel="canonical" href="https://sadapanna.com/app/inkflow/">
+<meta name="theme-color" content="#ffffff">
+<meta name="robots" content="index, follow">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sadapanna">
+<meta property="og:title" content="InkFlow — Turn Any Font Into a Handwriting Animation">
+<meta property="og:description" content="Any font + your text → an animated write-on Lottie, MP4, GIF, or WebM. Outline-and-fill or real handwriting stroke order, built entirely in the browser.">
+<meta property="og:url" content="https://sadapanna.com/app/inkflow/">
+<meta property="og:image" content="https://sadapanna.com/assets/brand/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="InkFlow — font and handwriting animation generator by Sadapanna">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://sadapanna.com/assets/brand/og-image.png">
+<meta name="twitter:title" content="InkFlow — Turn Any Font Into a Handwriting Animation">
+<meta name="twitter:description" content="Any font + your text → an animated write-on Lottie, MP4, GIF, or WebM. Built entirely in the browser — nothing uploaded.">
+
+<link rel="stylesheet" href="style.css?v=15">
 <link rel="icon" href="assets/logo.webp" type="image/webp">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "InkFlow",
+  "url": "https://sadapanna.com/app/inkflow/",
+  "applicationCategory": "DesignApplication",
+  "operatingSystem": "Any (runs in browser)",
+  "description": "InkFlow converts any font (.ttf/.otf/.woff) and typed text into an animated write-on effect — either an outline-then-fill stroke animation or true handwriting in real pen stroke order using Hershey engraving fonts. Renders and exports fully client-side as Lottie JSON, MP4, GIF, or WebM.",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "featureList": [
+    "Outline + fill letter animation from any uploaded font",
+    "Handwriting-style animation with 11 Hershey pen styles in real stroke order",
+    "Adjustable easing, per-letter duration, overlap, and timing",
+    "Export to Lottie JSON, MP4 (WebCodecs H.264), GIF, or WebM",
+    "Runs entirely in the browser — fonts and text never leave the device"
+  ],
+  "publisher": {
+    "@type": "Organization",
+    "name": "Sadapanna",
+    "url": "https://sadapanna.com/"
+  }
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Sadapanna", "item": "https://sadapanna.com/" },
+    { "@type": "ListItem", "position": 2, "name": "InkFlow", "item": "https://sadapanna.com/app/inkflow/" }
+  ]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How do I turn a font into a handwriting animation?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Upload a .ttf, .otf, or .woff font (or pick a bundled one) into InkFlow, type your text, choose Outline + Fill or Handwriting style, then export as Lottie JSON, MP4, GIF, or WebM — all processed locally in your browser."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What's the difference between Outline + Fill and Handwriting mode?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Outline + Fill traces each letter's outline with a stroke, then fades in the fill, and works with any font you upload. Handwriting mode uses the classic Hershey engraving fonts to draw true single-line pen strokes in real stroke order, like actual handwriting, with 11 pen styles to choose from."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does InkFlow upload my font or text anywhere?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. InkFlow runs entirely client-side — font parsing, animation, and video/GIF/Lottie encoding all happen in your browser. Nothing is uploaded to a server."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What file formats can I export from InkFlow?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Lottie JSON (editable in After Effects, plays in any Lottie player), MP4 video, animated GIF, and WebM with transparency support."
+      }
+    }
+  ]
+}
+</script>
 </head>
 <body>
 
 <header class="topbar">
-  <div class="brand">
-    <img class="brand-icon" src="assets/logo.webp" alt="Sadapanna">
-    <div>
-      <h1>InkFlow</h1>
-      <p>write it like magic — by sadapanna</p>
-    </div>
+  <a class="brand" href="/">
+    <img class="brand-icon" src="/assets/brand/icon-192.webp" alt="" width="192" height="186">
+    <span class="brand-word">Sadapanna</span>
+  </a>
+  <div class="app-tag">
+    <span class="app-tag-pill">InkFlow</span>
+    <span class="app-tag-sub">write it like magic</span>
   </div>
 </header>
+
+<section class="intro">
+  <h1>Turn any font into a <em class="hl">handwriting animation</em></h1>
+  <p>InkFlow takes any font and your text and draws it on — letter by letter, in real stroke
+    order — then exports it as a <strong>Lottie</strong>, <strong>MP4</strong>, <strong>GIF</strong>,
+    or transparent <strong>WebM</strong>. Everything runs in your browser; your fonts and text
+    never leave your device.</p>
+</section>
 
 <main class="layout">
   <!-- ======================= CONTROLS ======================= -->
@@ -262,6 +371,73 @@
     <p class="file-info" id="file-info"></p>
   </section>
 </main>
+
+<section class="about-app">
+  <div class="about-inner">
+
+    <h2>How InkFlow works</h2>
+    <ol class="steps">
+      <li><strong>Type your text</strong> and pick a style — brush, outline-and-fill, or single-line pen.</li>
+      <li><strong>Choose a font.</strong> Upload any <code>.ttf</code>, <code>.otf</code>, or <code>.woff</code>, or use a bundled one. Fonts are parsed locally with opentype.js and never uploaded.</li>
+      <li><strong>Tune the motion</strong> — easing, per-letter duration, overlap, and natural vs. uniform timing.</li>
+      <li><strong>Export</strong> as Lottie JSON, MP4, GIF, or transparent WebM. All encoding happens in your browser.</li>
+    </ol>
+
+    <h2>Two animation styles</h2>
+    <div class="feature-grid">
+      <div class="feature">
+        <h3>Outline + Fill</h3>
+        <p>The letter's outline is traced by a moving stroke, then the fill fades in. Works with
+          any font you upload — great for logos, titles, and lettering reveals.</p>
+      </div>
+      <div class="feature">
+        <h3>Handwriting</h3>
+        <p>True single-line pen strokes in real stroke order, using the classic Hershey engraving
+          fonts (11 pen styles: sans, script, cursive, serif, gothic…). Letters draw one after
+          another like actual writing.</p>
+      </div>
+    </div>
+
+    <h2>Questions</h2>
+    <div class="faq">
+      <details>
+        <summary>How do I turn a font into a handwriting animation?</summary>
+        <p>Upload a <code>.ttf</code>, <code>.otf</code>, or <code>.woff</code> font (or pick a
+          bundled one), type your text, choose Outline + Fill or Handwriting style, then export as
+          Lottie JSON, MP4, GIF, or WebM — all processed locally in your browser.</p>
+      </details>
+      <details>
+        <summary>What's the difference between Outline + Fill and Handwriting mode?</summary>
+        <p>Outline + Fill traces each letter's outline with a stroke, then fades in the fill, and
+          works with any font you upload. Handwriting mode uses the classic Hershey engraving fonts
+          to draw true single-line pen strokes in real stroke order, like actual handwriting, with
+          11 pen styles to choose from.</p>
+      </details>
+      <details>
+        <summary>Does InkFlow upload my font or text anywhere?</summary>
+        <p>No. InkFlow runs entirely client-side — font parsing, animation, and video/GIF/Lottie
+          encoding all happen in your browser. Nothing is uploaded to a server.</p>
+      </details>
+      <details>
+        <summary>What file formats can I export?</summary>
+        <p>Lottie JSON (editable in After Effects, plays in any Lottie player), MP4 video, animated
+          GIF, and WebM with transparency support.</p>
+      </details>
+    </div>
+
+  </div>
+</section>
+
+<footer class="app-footer">
+  <div class="app-footer-inner">
+    <span>InkFlow — a free tool by <a href="/">Sadapanna</a></span>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/privacy/">Privacy</a>
+      <a href="/terms/">Terms</a>
+    </nav>
+  </div>
+</footer>
 
 <script src="vendor/opentype.min.js"></script>
 <script src="vendor/lottie.min.js"></script>
