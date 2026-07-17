@@ -23,7 +23,7 @@
 <meta name="twitter:title" content="InkFlow — Turn Any Font Into a Handwriting Animation">
 <meta name="twitter:description" content="Any font + your text → an animated write-on Lottie, MP4, GIF, or WebM. Built entirely in the browser — nothing uploaded.">
 
-<link rel="stylesheet" href="style.css?v=15">
+<link rel="stylesheet" href="style.css?v=16">
 <link rel="icon" href="assets/logo.webp" type="image/webp">
 
 <script type="application/ld+json">
@@ -126,6 +126,9 @@
     order — then exports it as a <strong>Lottie</strong>, <strong>MP4</strong>, <strong>GIF</strong>,
     or transparent <strong>WebM</strong>. Everything runs in your browser; your fonts and text
     never leave your device.</p>
+  <div class="intro-demo" aria-hidden="true">
+    <div id="hero-lottie"></div>
+  </div>
 </section>
 
 <main class="layout">
@@ -447,5 +450,19 @@
 <script src="js/builder.js?v=6"></script>
 <script src="js/exporter.js?v=5"></script>
 <script src="js/app.js?v=13"></script>
+<script>
+  // Hero demo: play InkFlow's own exported Lottie, looping.
+  (function () {
+    var box = document.getElementById('hero-lottie');
+    if (!box || !window.lottie) return;
+    lottie.loadAnimation({
+      container: box,
+      renderer: 'svg',
+      loop: true,
+      autoplay: true,
+      path: 'assets/inkflow-demo.json?v=1'
+    });
+  })();
+</script>
 </body>
 </html>

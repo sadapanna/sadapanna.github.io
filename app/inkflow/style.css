@@ -441,6 +441,17 @@ details.adv > *:not(summary) { margin-top: 8px; }
   line-height: 1.65;
 }
 .intro strong { color: var(--ink); font-weight: 600; }
+.intro-demo {
+  max-width: 620px;
+  margin: 22px auto 0;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 26px rgba(107, 78, 255, .08);
+  padding: 18px 24px;
+}
+.intro-demo #hero-lottie { width: 100%; }
+.intro-demo #hero-lottie svg { display: block; margin: 0 auto; max-height: 190px; }
 
 /* ---------- about / how-it-works / FAQ ---------- */
 .about-app {
