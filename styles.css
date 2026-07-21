@@ -828,6 +828,488 @@ a {
   color: var(--ink-soft);
 }
 
+/* ============================================================
+   Sadapanna Mind — the blog
+   Index (post listing) + article layout. Reuses the site tokens.
+   ============================================================ */
+
+/* ---------- Blog index hero ---------- */
+.mind-hero {
+  padding: 72px 0 20px;
+  text-align: center;
+}
+
+.mind-hero .badge {
+  margin-bottom: 22px;
+}
+
+.mind-hero h1 {
+  font-size: clamp(2.2rem, 5.5vw, 3.6rem);
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+}
+
+.mind-hero .lede {
+  margin-top: 22px;
+}
+
+/* ---------- Post list ---------- */
+.mind-list {
+  padding: 40px 0 84px;
+}
+
+.post-list {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Load more (Firestore pagination) */
+.load-more-wrap {
+  margin-top: 40px;
+  display: flex;
+  justify-content: center;
+}
+
+/* `display: flex` above would otherwise override the UA [hidden] rule, so the
+   button stays visible when there are no more pages. Re-hide it explicitly. */
+.load-more-wrap[hidden] {
+  display: none;
+}
+
+.load-more-wrap .btn[disabled] {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.post-card {
+  display: grid;
+  grid-template-columns: 116px 1fr;
+  gap: 26px;
+  align-items: center;
+  background: var(--lavender-soft);
+  border: 1.5px solid #e7e1fb;
+  border-radius: var(--radius-lg);
+  padding: 26px 30px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.18s ease;
+}
+
+.post-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--purple);
+  box-shadow: 0 16px 32px rgba(107, 78, 255, 0.1);
+}
+
+.post-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 116px;
+  height: 116px;
+  border-radius: 22px;
+  background: var(--yellow);
+  font-size: 2.8rem;
+  box-shadow: 0 6px 16px rgba(29, 27, 38, 0.1);
+}
+
+.post-card-body h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.post-card-body h2 em {
+  font-family: var(--hand);
+  font-style: normal;
+  font-weight: 700;
+  font-size: 1.2em;
+  color: var(--purple);
+}
+
+.post-card-body p {
+  margin-top: 8px;
+  color: var(--ink-soft);
+  font-size: 0.96rem;
+}
+
+.post-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+
+.post-tag {
+  padding: 4px 13px;
+  border-radius: var(--radius-pill);
+  background: var(--lavender);
+  color: var(--purple-deep);
+  font-weight: 600;
+  font-size: 0.74rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* ---------- Article ---------- */
+.article {
+  padding: 40px 0 40px;
+  max-width: 720px;
+}
+
+.breadcrumb {
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+  margin-bottom: 28px;
+}
+
+.breadcrumb a {
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+
+.breadcrumb a:hover {
+  color: var(--purple);
+}
+
+.breadcrumb span {
+  margin: 0 8px;
+  opacity: 0.6;
+}
+
+.article-header {
+  margin-bottom: 36px;
+}
+
+.article-header .post-meta {
+  margin-top: 0;
+  margin-bottom: 18px;
+}
+
+.article-header h1 {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 700;
+  line-height: 1.14;
+  letter-spacing: -0.02em;
+}
+
+.article-header h1 em {
+  font-family: var(--hand);
+  font-style: normal;
+  font-weight: 700;
+  font-size: 1.15em;
+  color: var(--purple);
+}
+
+.article-lede {
+  margin-top: 20px;
+  font-size: 1.18rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+.byline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1.5px solid #efecf9;
+}
+
+.byline img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.byline-name {
+  font-weight: 600;
+  color: var(--ink);
+  font-size: 0.94rem;
+}
+
+.byline-sub {
+  color: var(--ink-soft);
+  font-size: 0.84rem;
+}
+
+/* article hero image / figure */
+.article-figure {
+  margin: 6px 0 40px;
+}
+
+.article-figure .figure-frame {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--lavender) 0%, var(--yellow-soft) 100%);
+  aspect-ratio: 16 / 8.5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4.5rem;
+}
+
+.article-figure img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.article-figure figcaption {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 0.86rem;
+  color: var(--ink-soft);
+}
+
+/* article body prose */
+.prose {
+  font-size: 1.08rem;
+  line-height: 1.8;
+  color: #2c2a38;
+}
+
+.prose > p {
+  margin-bottom: 24px;
+}
+
+.prose h2 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 48px 0 16px;
+  color: var(--ink);
+}
+
+.prose h2 em {
+  font-family: var(--hand);
+  font-style: normal;
+  font-weight: 700;
+  font-size: 1.15em;
+  color: var(--purple);
+}
+
+.prose h3 {
+  font-size: 1.22rem;
+  font-weight: 600;
+  margin: 36px 0 12px;
+  color: var(--ink);
+}
+
+.prose a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1.5px;
+  font-weight: 500;
+}
+
+.prose strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.prose code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85em;
+  background: var(--lavender);
+  padding: 2px 7px;
+  border-radius: 6px;
+  color: var(--purple-deep);
+}
+
+.prose ul,
+.prose ol {
+  margin: 0 0 24px;
+  padding-left: 24px;
+}
+
+.prose li {
+  margin-bottom: 10px;
+}
+
+.prose li::marker {
+  color: var(--purple);
+}
+
+.prose blockquote {
+  margin: 32px 0;
+  padding: 4px 26px;
+  border-left: 4px solid var(--purple);
+  background: var(--lavender-soft);
+  border-radius: 0 16px 16px 0;
+  font-size: 1.12rem;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.prose blockquote p {
+  margin: 18px 0;
+}
+
+.prose blockquote em {
+  font-family: var(--hand);
+  font-style: normal;
+  font-weight: 700;
+  color: var(--purple);
+  font-size: 1.1em;
+}
+
+/* callout box */
+.callout {
+  display: flex;
+  gap: 16px;
+  margin: 32px 0;
+  padding: 22px 24px;
+  background: var(--yellow-soft);
+  border-radius: 20px;
+}
+
+.callout-icon {
+  font-size: 1.5rem;
+  line-height: 1.4;
+  flex: 0 0 auto;
+}
+
+.callout p {
+  margin: 0;
+  font-size: 0.98rem;
+  color: var(--ink);
+}
+
+/* feature grid inside an article */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 16px;
+  margin: 32px 0;
+}
+
+.feature {
+  background: var(--white);
+  border: 1.5px solid #ece8f9;
+  border-radius: 18px;
+  padding: 22px 20px;
+}
+
+.feature-emoji {
+  font-size: 1.6rem;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.feature h4 {
+  font-size: 1.02rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--ink);
+}
+
+.feature p {
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* inline try-it CTA banner */
+.try-banner {
+  margin: 44px 0 8px;
+  background: var(--purple);
+  color: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 34px 32px;
+  text-align: center;
+}
+
+.try-banner h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--white);
+  margin: 0 0 8px;
+}
+
+.try-banner h3 em {
+  font-family: var(--hand);
+  font-style: normal;
+  font-weight: 700;
+  font-size: 1.15em;
+  color: var(--yellow);
+}
+
+.try-banner p {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.98rem;
+  margin: 0 auto 22px;
+  max-width: 30em;
+}
+
+.try-banner .btn-primary {
+  background: var(--yellow);
+  color: var(--ink);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.try-banner .btn-primary .btn-arrow {
+  background: rgba(29, 27, 38, 0.14);
+}
+
+.try-banner .btn-primary:hover {
+  background: var(--yellow-soft);
+}
+
+/* article footer / share row */
+.article-foot {
+  margin-top: 48px;
+  padding-top: 28px;
+  border-top: 1.5px solid #efecf9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.article-foot .back-link {
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.article-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 620px) {
+  .post-card {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    text-align: center;
+  }
+
+  .post-thumb {
+    margin: 0 auto;
+  }
+
+  .post-meta {
+    justify-content: center;
+  }
+
+  .article-figure .figure-frame {
+    font-size: 3rem;
+  }
+}
+
 /* ---------- Footer ---------- */
 .site-footer {
   border-top: 1.5px solid #efecf9;

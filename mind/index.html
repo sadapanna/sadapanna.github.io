@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mind — the Sadapanna blog</title>
+  <meta name="description"
+    content="Sadapanna Mind is the Sadapanna blog — notes, ideas, and behind-the-scenes on the apps, games, and tools we build. Start with the story of InkFlow." />
+  <link rel="canonical" href="https://sadapanna.com/mind/" />
+  <meta name="theme-color" content="#ffffff" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Sadapanna" />
+  <meta property="og:title" content="Mind — the Sadapanna blog" />
+  <meta property="og:description"
+    content="Sadapanna Mind — notes and ideas from the studio, and the story behind the things we make." />
+  <meta property="og:url" content="https://sadapanna.com/mind/" />
+  <meta property="og:image" content="https://sadapanna.com/assets/brand/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://sadapanna.com/assets/brand/og-image.png" />
+  <meta name="twitter:title" content="Mind — the Sadapanna blog" />
+  <meta name="twitter:description" content="Notes and ideas from Sadapanna, and the story behind the things we make." />
+
+  <link rel="preload" href="/assets/fonts/madimi-one-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/assets/fonts/poppins-400.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="icon" href="/assets/brand/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/brand/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/brand/favicon-16.png" />
+  <link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    "name": "Sadapanna Mind",
+    "alternateName": ["Sadapanna Mind", "Sada Panna Mind", "Sadapanna blog"],
+    "url": "https://sadapanna.com/mind/",
+    "description": "The Sadapanna blog — notes, ideas, and the story behind the apps, games, and tools we build.",
+    "publisher": {
+      "@type": "Organization",
+      "name": "Sadapanna",
+      "url": "https://sadapanna.com/",
+      "logo": "https://sadapanna.com/assets/brand/logo-white.png"
+    }
+  }
+  </script>
+  <script type='module' src='https://static.cloudflareinsights.com/beacon.min.js'
+    data-cf-beacon='{"token": "decf7f7fdb114793be902266b9912861"}'></script>
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a class="brand" href="/">
+        <img class="brand-icon" src="/assets/brand/icon-192.webp" alt="" width="192" height="186" />
+        <span class="brand-word">Sadapanna</span>
+      </a>
+      <nav class="site-nav">
+        <a class="nav-pill" href="/#projects">Projects</a>
+        <a class="nav-pill" href="/mind/">Mind</a>
+        <a class="nav-pill" href="/#about">About</a>
+        <a class="nav-pill" href="/#contact">Contact</a>
+      </nav>
+      <a class="btn btn-outline header-cta" href="mailto:hello@sadapanna.com">Say hello <span
+          class="btn-arrow">↗</span></a>
+    </div>
+  </header>
+
+  <main>
+    <section class="mind-hero">
+      <div class="container">
+        <span class="badge"><span class="badge-dot"></span>Sadapanna Mind</span>
+        <h1>Things on our <em class="hl hl-purple">mind</em></h1>
+        <p class="lede">Notes, ideas, and the odd behind-the-scenes from the studio. Short reads about the apps, games,
+          and tools we build — and why we build them the way we do.</p>
+      </div>
+    </section>
+
+    <section class="mind-list">
+      <div class="container">
+        <!-- Rendered from Firestore ("blogs"), newest first. The card below is
+             a fallback shown if Firestore is unreachable or not yet seeded. -->
+        <div class="post-list" id="post-list" aria-live="polite">
+
+          <a class="post-card" href="/mind/post/?slug=introducing-inkflow">
+            <span class="post-thumb">✍️</span>
+            <div class="post-card-body">
+              <div class="post-meta">
+                <span class="post-tag">New</span>
+                <span>July 21, 2026</span>
+                <span>·</span>
+                <span>4 min read</span>
+              </div>
+              <h2>Meet <em>InkFlow</em> — turn any font into an animated write-on</h2>
+              <p>Our newest tool takes your text and any font and animates it being written, letter by letter — then
+                exports it as Lottie, MP4, GIF, or WebM. All in the browser, nothing uploaded.</p>
+            </div>
+          </a>
+
+        </div>
+        <div class="load-more-wrap" id="posts-more" hidden>
+          <button class="btn btn-outline" id="posts-more-btn" type="button">Load more <span
+              class="btn-arrow">↓</span></button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <span>© 2026 Sadapanna <img class="foot-icon" src="/assets/brand/icon-192.webp" alt="" width="192"
+          height="186" /> made slowly</span>
+      <nav class="footer-links">
+        <a href="/mind/">Mind</a>
+        <a href="/privacy/">Privacy</a>
+        <a href="/terms/">Terms</a>
+        <a href="/backyard/">Backyard</a>
+        <a href="/#contact">Contact</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { fetchPage, esc, accentName } from "/assets/sada-firebase.js";
+
+    const list = document.getElementById("post-list");
+    const moreWrap = document.getElementById("posts-more");
+    const moreBtn = document.getElementById("posts-more-btn");
+    const PAGE = 6;
+    let cursor = null;
+
+    function card(b) {
+      const meta =
+        '<div class="post-meta">' +
+        (b.tag ? '<span class="post-tag">' + esc(b.tag) + "</span>" : "") +
+        (b.date ? "<span>" + esc(b.date) + "</span>" : "") +
+        (b.readTime ? "<span>·</span><span>" + esc(b.readTime) + "</span>" : "") +
+        "</div>";
+      return (
+        '<a class="post-card" href="/mind/post/?slug=' + encodeURIComponent(b.slug) + '">' +
+        '<span class="post-thumb">' + esc(b.emoji || "📝") + "</span>" +
+        '<div class="post-card-body">' +
+        meta +
+        "<h2>" + accentName(b.title, b.accent) + "</h2>" +
+        "<p>" + esc(b.excerpt) + "</p>" +
+        "</div></a>"
+      );
+    }
+
+    async function load(first) {
+      try {
+        const { items, cursor: c, done } = await fetchPage("blogs", {
+          field: "createdAt",
+          dir: "desc",
+          size: PAGE,
+          cursor,
+        });
+        if (first) {
+          if (!items.length) return; // keep the static fallback card
+          list.innerHTML = "";
+        }
+        list.insertAdjacentHTML("beforeend", items.map(card).join(""));
+        cursor = c;
+        moreWrap.hidden = done;
+      } catch (err) {
+        console.warn("[blogs] using fallback card:", err);
+        moreWrap.hidden = true;
+      }
+    }
+
+    moreBtn.addEventListener("click", () => load(false));
+    load(true);
+  </script>
+</body>
+
+</html>

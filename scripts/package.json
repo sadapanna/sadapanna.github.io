@@ -1,0 +1,15 @@
+{
+  "name": "sadapanna-seed",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Seed the Sadapanna Firestore (projects + blogs) with the Admin SDK.",
+  "scripts": {
+    "seed": "node seed.mjs",
+    "seed:projects": "node seed.mjs projects",
+    "seed:blogs": "node seed.mjs blogs"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0"
+  }
+}

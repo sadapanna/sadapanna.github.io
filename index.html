@@ -109,6 +109,7 @@
       </a>
       <nav class="site-nav">
         <a class="nav-pill" href="#projects">Projects</a>
+        <a class="nav-pill" href="/mind/">Mind</a>
         <a class="nav-pill" href="#about">About</a>
         <a class="nav-pill" href="#faq">FAQ</a>
         <a class="nav-pill" href="#contact">Contact</a>
@@ -148,7 +149,9 @@
       <div class="container">
         <h2 class="section-title">What's <em class="hl hl-purple">in the works</em></h2>
         <p class="section-sub">Two products lead the way. They won't be the last.</p>
-        <div class="cards">
+        <!-- Rendered from Firestore ("projects"). The cards below are a
+             fallback shown if Firestore is unreachable or not yet seeded. -->
+        <div class="cards" id="projects-grid" aria-live="polite">
           <a class="card card-lav" href="/arrow-flux/">
             <span class="card-badge vt-flux-icon">🎯</span>
             <h3>Arrow <em>Flux</em></h3>
@@ -178,6 +181,10 @@
               to shorten it.</p>
             <span class="status">Exploring</span>
           </article>
+        </div>
+        <div class="load-more-wrap" id="projects-more" hidden>
+          <button class="btn btn-outline" id="projects-more-btn" type="button">Load more <span
+              class="btn-arrow">↓</span></button>
         </div>
       </div>
     </section>
@@ -249,6 +256,7 @@
     <div class="container">
       <span>© 2026 Sadapanna <img class="foot-icon" src="/assets/brand/icon-192.webp" alt="" width="192" height="186" /> made slowly</span>
       <nav class="footer-links">
+        <a href="/mind/">Mind</a>
         <a href="/privacy/">Privacy</a>
         <a href="/terms/">Terms</a>
         <a href="/backyard/">Backyard</a>
@@ -256,6 +264,57 @@
       </nav>
     </div>
   </footer>
+
+  <script type="module">
+    import { fetchPage, esc, accentName } from "/assets/sada-firebase.js";
+
+    const grid = document.getElementById("projects-grid");
+    const moreWrap = document.getElementById("projects-more");
+    const moreBtn = document.getElementById("projects-more-btn");
+    const PAGE = 6;
+    let cursor = null;
+
+    function card(p) {
+      const cls = "card card-" + (p.cardStyle || "lav");
+      const badgeCls = "card-badge" + (p.vtIcon ? " vt-flux-icon" : "");
+      const statusCls =
+        "status" +
+        (p.statusStyle ? " status-" + p.statusStyle : "") +
+        (p.vtStatus ? " vt-flux-status" : "");
+      const inner =
+        '<span class="' + badgeCls + '">' + esc(p.emoji || "✦") + "</span>" +
+        "<h3>" + accentName(p.title, p.accent) + "</h3>" +
+        "<p>" + esc(p.description) + "</p>" +
+        (p.status ? '<span class="' + statusCls + '">' + esc(p.status) + "</span>" : "");
+      return p.href
+        ? '<a class="' + cls + '" href="' + esc(p.href) + '">' + inner + "</a>"
+        : '<article class="' + cls + '">' + inner + "</article>";
+    }
+
+    async function load(first) {
+      try {
+        const { items, cursor: c, done } = await fetchPage("projects", {
+          field: "order",
+          dir: "asc",
+          size: PAGE,
+          cursor,
+        });
+        if (first) {
+          if (!items.length) return; // keep the static fallback cards
+          grid.innerHTML = "";
+        }
+        grid.insertAdjacentHTML("beforeend", items.map(card).join(""));
+        cursor = c;
+        moreWrap.hidden = done;
+      } catch (err) {
+        console.warn("[projects] using fallback cards:", err);
+        moreWrap.hidden = true;
+      }
+    }
+
+    moreBtn.addEventListener("click", () => load(false));
+    load(true);
+  </script>
 </body>
 
 </html>
