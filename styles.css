@@ -1291,14 +1291,98 @@ a {
 }
 
 @media (max-width: 620px) {
+  /* Give narrow screens back some width — 28px each side is a lot at 390px. */
+  .container {
+    padding: 0 20px;
+  }
+
+  /* Header: brand on its own line, nav as a full-width wrapped row below it,
+     so the pills stop crowding against the wordmark. */
+  .site-header {
+    padding: 18px 0;
+  }
+
+  .site-header .container {
+    justify-content: flex-start;
+    gap: 14px;
+  }
+
+  .brand-word {
+    font-size: 1.4rem;
+  }
+
+  .site-nav {
+    flex-basis: 100%;
+    gap: 8px;
+  }
+
+  .nav-pill {
+    padding: 7px 15px;
+    font-size: 0.85rem;
+  }
+
+  /* Long, tightly-tracked headings clip the viewport edge at the tablet-sized
+     clamp() minimums, so pull them down and let long words wrap cleanly. */
+  .hero h1,
+  .mind-hero h1,
+  .article-header h1,
+  .hero h2,
+  .section-title {
+    overflow-wrap: break-word;
+    letter-spacing: -0.01em;
+  }
+
+  .hero {
+    padding: 52px 0 48px;
+  }
+
+  .hero h1 {
+    font-size: clamp(1.9rem, 8.5vw, 2.4rem);
+    line-height: 1.16;
+  }
+
+  .mind-hero {
+    padding: 52px 0 16px;
+  }
+
+  .mind-hero h1 {
+    font-size: clamp(1.85rem, 8vw, 2.2rem);
+  }
+
+  .lede,
+  .mind-hero .lede {
+    font-size: 1rem;
+  }
+
+  .article {
+    padding: 24px 0 32px;
+  }
+
+  .article-header h1 {
+    font-size: clamp(1.65rem, 7.2vw, 2rem);
+    line-height: 1.18;
+  }
+
+  .article-lede {
+    font-size: 1.05rem;
+  }
+
   .post-card {
     grid-template-columns: 1fr;
     gap: 16px;
     text-align: center;
+    padding: 24px 22px;
   }
 
   .post-thumb {
     margin: 0 auto;
+    width: 84px;
+    height: 84px;
+    font-size: 2.1rem;
+  }
+
+  .post-card-body h2 {
+    font-size: 1.2rem;
   }
 
   .post-meta {
