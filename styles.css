@@ -1291,9 +1291,9 @@ a {
 }
 
 @media (max-width: 620px) {
-  /* Give narrow screens back some width — 28px each side is a lot at 390px. */
+  /* Roomier side gutters on phones so text and cards never hug the edge. */
   .container {
-    padding: 0 20px;
+    padding: 0 30px;
   }
 
   /* Header: brand on its own line, nav as a full-width wrapped row below it,
