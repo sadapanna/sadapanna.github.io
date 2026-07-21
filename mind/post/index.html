@@ -4,169 +4,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sadapanna Mind</title>
-  <meta name="description" content="A post from Sadapanna Mind — the Sadapanna blog." />
-  <meta name="theme-color" content="#ffffff" />
-  <meta property="og:type" content="article" />
-  <meta property="og:site_name" content="Sadapanna" />
-  <link id="canonical" rel="canonical" href="https://sadapanna.com/mind/" />
-
-  <link rel="preload" href="/assets/fonts/madimi-one-latin.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="preload" href="/assets/fonts/poppins-400.woff2" as="font" type="font/woff2" crossorigin />
+  <title>Redirecting… · Sadapanna Mind</title>
+  <meta name="robots" content="noindex" />
   <link rel="stylesheet" href="/styles.css?v=2" />
   <link rel="icon" href="/assets/brand/favicon.ico" sizes="any" />
-  <link rel="icon" type="image/png" sizes="32x32" href="/assets/brand/favicon-32.png" />
-  <link rel="icon" type="image/png" sizes="16x16" href="/assets/brand/favicon-16.png" />
-  <link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png" />
-  <script type='module' src='https://static.cloudflareinsights.com/beacon.min.js'
-    data-cf-beacon='{"token": "decf7f7fdb114793be902266b9912861"}'></script>
+  <!-- Legacy route. Articles now live at /mind/<slug>/ as static, indexable
+       pages (built by scripts/build-posts.mjs). This forwards old
+       /mind/post/?slug=… links to the new location. -->
+  <script>
+    (function () {
+      var slug = new URLSearchParams(location.search).get("slug");
+      var target = slug ? "/mind/" + encodeURIComponent(slug) + "/" : "/mind/";
+      location.replace(target);
+    })();
+  </script>
 </head>
 
 <body>
-  <header class="site-header">
-    <div class="container">
-      <a class="brand" href="/">
-        <img class="brand-icon" src="/assets/brand/icon-192.webp" alt="" width="192" height="186" />
-        <span class="brand-word">Sadapanna</span>
-      </a>
-      <nav class="site-nav">
-        <a class="nav-pill" href="/#projects">Projects</a>
-        <a class="nav-pill" href="/mind/">Mind</a>
-        <a class="nav-pill" href="/#about">About</a>
-        <a class="nav-pill" href="/#contact">Contact</a>
-      </nav>
-      <a class="btn btn-outline header-cta" href="mailto:hello@sadapanna.com">Say hello <span
-          class="btn-arrow">↗</span></a>
-    </div>
-  </header>
-
   <main>
-    <article class="container article" id="article">
-      <nav class="breadcrumb">
-        <a href="/mind/">Mind</a><span>/</span><span id="crumb">Loading…</span>
-      </nav>
-      <p class="yard-loading" id="status">Opening the post…</p>
-    </article>
-  </main>
-
-  <footer class="site-footer">
-    <div class="container">
-      <span>© 2026 Sadapanna <img class="foot-icon" src="/assets/brand/icon-192.webp" alt="" width="192"
-          height="186" /> made slowly</span>
-      <nav class="footer-links">
-        <a href="/mind/">Mind</a>
-        <a href="/privacy/">Privacy</a>
-        <a href="/terms/">Terms</a>
-        <a href="/backyard/">Backyard</a>
-        <a href="/#contact">Contact</a>
-      </nav>
+    <div class="container article">
+      <p class="yard-loading">
+        Taking you to the post… <a href="/mind/">Go to Mind →</a>
+      </p>
     </div>
-  </footer>
-
-  <script type="module">
-    import { fetchBySlug, esc, accentName } from "/assets/sada-firebase.js";
-
-    const article = document.getElementById("article");
-    const slug = new URLSearchParams(location.search).get("slug");
-
-    // Create or update a <meta> tag identified by an attribute/value pair.
-    function upsertMeta(key, keyVal, content) {
-      let el = document.head.querySelector("meta[" + key + '="' + keyVal + '"]');
-      if (!el) {
-        el = document.createElement("meta");
-        el.setAttribute(key, keyVal);
-        document.head.appendChild(el);
-      }
-      el.setAttribute("content", content);
-    }
-
-    function setMeta(post) {
-      document.title = post.title + " · Sadapanna Mind";
-      const url = "https://sadapanna.com/mind/post/?slug=" + encodeURIComponent(post.slug);
-      document.getElementById("canonical").href = url;
-      const desc = post.excerpt || "";
-      upsertMeta("name", "description", desc);
-      upsertMeta("property", "og:title", post.title);
-      upsertMeta("property", "og:description", desc);
-      upsertMeta("property", "og:url", url);
-      upsertMeta("property", "og:type", "article");
-    }
-
-    function render(post) {
-      setMeta(post);
-      document.getElementById("crumb").textContent = post.accent || post.title;
-
-      const meta =
-        '<div class="post-meta">' +
-        (post.tag ? '<span class="post-tag">' + esc(post.tag) + "</span>" : "") +
-        (post.date ? "<span>" + esc(post.date) + "</span>" : "") +
-        (post.readTime ? "<span>·</span><span>" + esc(post.readTime) + "</span>" : "") +
-        "</div>";
-
-      const header =
-        '<header class="article-header">' +
-        meta +
-        "<h1>" + accentName(post.title, post.accent) + "</h1>" +
-        (post.excerpt ? '<p class="article-lede">' + esc(post.excerpt) + "</p>" : "") +
-        '<div class="byline">' +
-        '<img src="/assets/brand/icon-192.webp" alt="" />' +
-        "<div>" +
-        '<div class="byline-name">' + esc(post.author || "The Sadapanna team") + "</div>" +
-        (post.date ? '<div class="byline-sub">Published ' + esc(post.date) + "</div>" : "") +
-        "</div></div></header>";
-
-      const figure = post.coverEmoji
-        ? '<figure class="article-figure">' +
-          '<div class="figure-frame">' + esc(post.coverEmoji) + "</div>" +
-          (post.coverCaption ? "<figcaption>" + esc(post.coverCaption) + "</figcaption>" : "") +
-          "</figure>"
-        : "";
-
-      // post.body is trusted content authored by the studio and written only
-      // via the Admin SDK (clients cannot write — see firestore.rules).
-      const body = '<div class="prose">' + (post.body || "") + "</div>";
-
-      const foot =
-        '<div class="article-foot">' +
-        '<a class="back-link" href="/mind/">← Back to Mind</a>' +
-        (Array.isArray(post.tags) && post.tags.length
-          ? '<div class="article-tags">' +
-            post.tags.map((t) => '<span class="post-tag">' + esc(t) + "</span>").join("") +
-            "</div>"
-          : "") +
-        "</div>";
-
-      const crumb =
-        '<nav class="breadcrumb"><a href="/mind/">Mind</a><span>/</span>' +
-        esc(post.accent || post.title) + "</nav>";
-
-      article.innerHTML = crumb + header + figure + body + foot;
-    }
-
-    function notFound(msg) {
-      document.getElementById("crumb").textContent = "Not found";
-      document.getElementById("status").innerHTML =
-        esc(msg) + ' <a href="/mind/">Back to Mind →</a>';
-    }
-
-    (async () => {
-      if (!slug) {
-        notFound("No post was requested.");
-        return;
-      }
-      try {
-        const post = await fetchBySlug("blogs", slug);
-        if (!post) {
-          notFound("We couldn't find that post.");
-          return;
-        }
-        render(post);
-      } catch (err) {
-        console.warn("[post] load failed:", err);
-        notFound("Couldn't load this post right now. Please try again.");
-      }
-    })();
-  </script>
+  </main>
 </body>
 
 </html>

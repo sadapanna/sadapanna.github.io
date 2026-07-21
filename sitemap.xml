@@ -27,8 +27,10 @@
     <loc>https://sadapanna.com/mind/</loc>
     <lastmod>2026-07-21</lastmod>
   </url>
+  <!-- BLOG_POSTS:START -->
   <url>
-    <loc>https://sadapanna.com/mind/post/?slug=introducing-inkflow</loc>
+    <loc>https://sadapanna.com/mind/introducing-inkflow/</loc>
     <lastmod>2026-07-21</lastmod>
   </url>
+  <!-- BLOG_POSTS:END -->
 </urlset>

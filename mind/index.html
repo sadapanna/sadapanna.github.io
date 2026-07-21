@@ -86,7 +86,7 @@
              a fallback shown if Firestore is unreachable or not yet seeded. -->
         <div class="post-list" id="post-list" aria-live="polite">
 
-          <a class="post-card" href="/mind/post/?slug=introducing-inkflow">
+          <a class="post-card" href="/mind/introducing-inkflow/">
             <span class="post-thumb">✍️</span>
             <div class="post-card-body">
               <div class="post-meta">
@@ -141,7 +141,7 @@
         (b.readTime ? "<span>·</span><span>" + esc(b.readTime) + "</span>" : "") +
         "</div>";
       return (
-        '<a class="post-card" href="/mind/post/?slug=' + encodeURIComponent(b.slug) + '">' +
+        '<a class="post-card" href="/mind/' + encodeURIComponent(b.slug) + '/">' +
         '<span class="post-thumb">' + esc(b.emoji || "📝") + "</span>" +
         '<div class="post-card-body">' +
         meta +

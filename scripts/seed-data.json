@@ -72,6 +72,7 @@
       "author": "The Sadapanna team",
       "excerpt": "Type a word, pick a font, and watch it get written on-screen, letter by letter — then download it as a Lottie, video, or GIF and drop it into your project. Free, in-browser, and nothing you type ever leaves your device.",
       "tags": ["InkFlow", "Tools", "Privacy"],
+      "ogImage": "/app/inkflow/assets/og-image.png",
       "bodyFile": "bodies/introducing-inkflow.html",
       "published": true,
       "createdAt": "2026-07-21"
