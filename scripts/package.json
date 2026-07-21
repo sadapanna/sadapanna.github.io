@@ -1,17 +1,10 @@
 {
-  "name": "sadapanna-seed",
+  "name": "sadapanna-build",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Seed the Sadapanna Firestore (projects + blogs) with the Admin SDK.",
+  "description": "Generate the Sadapanna site content (projects, blog list, articles, sitemap) from seed-data.json.",
   "scripts": {
-    "publish": "node seed.mjs && node build-posts.mjs",
-    "seed": "node seed.mjs",
-    "seed:projects": "node seed.mjs projects",
-    "seed:blogs": "node seed.mjs blogs",
-    "build": "node build-posts.mjs"
-  },
-  "dependencies": {
-    "firebase-admin": "^12.7.0"
+    "build": "node build.mjs"
   }
 }

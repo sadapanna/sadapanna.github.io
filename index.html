@@ -149,42 +149,33 @@
       <div class="container">
         <h2 class="section-title">What's <em class="hl hl-purple">in the works</em></h2>
         <p class="section-sub">Two products lead the way. They won't be the last.</p>
-        <!-- Rendered from Firestore ("projects"). The cards below are a
-             fallback shown if Firestore is unreachable or not yet seeded. -->
-        <div class="cards" id="projects-grid" aria-live="polite">
-          <a class="card card-lav" href="/arrow-flux/">
-            <span class="card-badge vt-flux-icon">🎯</span>
-            <h3>Arrow <em>Flux</em></h3>
-            <p>A game about timing and aim. The idea is simple; getting it to feel right is the hard part, and that's
-              exactly where we are now.</p>
-            <span class="status vt-flux-status">Closed Testing</span>
-          </a>
-          <article class="card card-purple">
-            <span class="card-badge">🌱</span>
-            <h3>Trail <em>Mark</em></h3>
-            <p>A small app for keeping up daily habits. We started building it because none of the trackers we tried
-              ever stuck with us.</p>
-            <span class="status status-light">In development</span>
-          </article>
-          <a class="card card-yellow" href="/app/inkflow/">
-            <span class="card-badge">✍️</span>
-            <h3>Ink<em>Flow</em></h3>
-            <p>A free browser tool that turns any font and your text into an animated write-on — export as Lottie, MP4,
-              GIF, or WebM. Nothing leaves your device.</p>
-            <span class="status status-dark">Live now</span>
-          </a>
-
-          <article class="card card-lav">
-            <span class="card-badge">✦</span>
-            <h3>And <em>beyond</em></h3>
-            <p>Apps and games are chapter one. Tools, services, experiments — the list is long, and we're not in a rush
-              to shorten it.</p>
-            <span class="status">Exploring</span>
-          </article>
-        </div>
-        <div class="load-more-wrap" id="projects-more" hidden>
-          <button class="btn btn-outline" id="projects-more-btn" type="button">Load more <span
-              class="btn-arrow">↓</span></button>
+        <div class="cards">
+        <!-- PROJECTS:START -->
+        <a class="card card-lav" href="/arrow-flux/">
+          <span class="card-badge vt-flux-icon">🎯</span>
+          <h3>Arrow <em>Flux</em></h3>
+          <p>A game about timing and aim. The idea is simple; getting it to feel right is the hard part, and that&#39;s exactly where we are now.</p>
+          <span class="status vt-flux-status">Closed Testing</span>
+        </a>
+        <article class="card card-purple">
+          <span class="card-badge">🌱</span>
+          <h3>Trail <em>Mark</em></h3>
+          <p>A small app for keeping up daily habits. We started building it because none of the trackers we tried ever stuck with us.</p>
+          <span class="status status-light">In development</span>
+        </article>
+        <a class="card card-yellow" href="/app/inkflow/">
+          <span class="card-badge">✍️</span>
+          <h3>Ink<em>Flow</em></h3>
+          <p>A free browser tool that turns any font and your text into an animated write-on — export as Lottie, MP4, GIF, or WebM. Nothing leaves your device.</p>
+          <span class="status status-dark">Live now</span>
+        </a>
+        <article class="card card-lav">
+          <span class="card-badge">✦</span>
+          <h3>And <em>beyond</em></h3>
+          <p>Apps and games are chapter one. Tools, services, experiments — the list is long, and we&#39;re not in a rush to shorten it.</p>
+          <span class="status">Exploring</span>
+        </article>
+        <!-- PROJECTS:END -->
         </div>
       </div>
     </section>
@@ -264,57 +255,6 @@
       </nav>
     </div>
   </footer>
-
-  <script type="module">
-    import { fetchPage, esc, accentName } from "/assets/sada-firebase.js";
-
-    const grid = document.getElementById("projects-grid");
-    const moreWrap = document.getElementById("projects-more");
-    const moreBtn = document.getElementById("projects-more-btn");
-    const PAGE = 6;
-    let cursor = null;
-
-    function card(p) {
-      const cls = "card card-" + (p.cardStyle || "lav");
-      const badgeCls = "card-badge" + (p.vtIcon ? " vt-flux-icon" : "");
-      const statusCls =
-        "status" +
-        (p.statusStyle ? " status-" + p.statusStyle : "") +
-        (p.vtStatus ? " vt-flux-status" : "");
-      const inner =
-        '<span class="' + badgeCls + '">' + esc(p.emoji || "✦") + "</span>" +
-        "<h3>" + accentName(p.title, p.accent) + "</h3>" +
-        "<p>" + esc(p.description) + "</p>" +
-        (p.status ? '<span class="' + statusCls + '">' + esc(p.status) + "</span>" : "");
-      return p.href
-        ? '<a class="' + cls + '" href="' + esc(p.href) + '">' + inner + "</a>"
-        : '<article class="' + cls + '">' + inner + "</article>";
-    }
-
-    async function load(first) {
-      try {
-        const { items, cursor: c, done } = await fetchPage("projects", {
-          field: "order",
-          dir: "asc",
-          size: PAGE,
-          cursor,
-        });
-        if (first) {
-          if (!items.length) return; // keep the static fallback cards
-          grid.innerHTML = "";
-        }
-        grid.insertAdjacentHTML("beforeend", items.map(card).join(""));
-        cursor = c;
-        moreWrap.hidden = done;
-      } catch (err) {
-        console.warn("[projects] using fallback cards:", err);
-        moreWrap.hidden = true;
-      }
-    }
-
-    moreBtn.addEventListener("click", () => load(false));
-    load(true);
-  </script>
 </body>
 
 </html>

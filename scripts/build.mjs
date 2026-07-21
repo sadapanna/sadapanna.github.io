@@ -1,20 +1,21 @@
 // ---------------------------------------------------------------------------
-// Build static, fully-indexable article pages from the blog content.
+// Build the whole site's content from one source of truth: seed-data.json.
 //
-// Reads scripts/seed-data.json + scripts/bodies/*.html and writes a complete
-// static page per post at:  mind/<slug>/index.html
+// No database, no network, no credentials — just reads local files and writes
+// plain HTML. Everything ends up in the page as-sent, so search engines and
+// link-preview crawlers (which mostly don't run JavaScript) see the real
+// content.
 //
-// Why: search engines and link-preview crawlers (Google, Bing, WhatsApp,
-// LinkedIn, Slack, …) read the HTML as-sent and mostly don't run JavaScript.
-// Pre-building the pages puts the full article, title, and social tags right
-// in the HTML, so every post indexes and previews correctly.
+// It generates:
+//   • Home "What's in the works" project cards  → index.html   (PROJECTS markers)
+//   • /mind/ post list cards                     → mind/index.html (POSTS markers)
+//   • Article pages                              → mind/<slug>/index.html
+//   • Blog URLs in the sitemap                   → sitemap.xml   (BLOG_POSTS markers)
 //
-// It also refreshes the blog-post URLs in ../sitemap.xml (between the
-// BLOG_POSTS markers).
+// Run:  npm run build     (from scripts/)   — or:  node build.mjs
 //
-// Run:  node build-posts.mjs      (or, with seeding: npm run publish)
-//
-// No credentials needed — this reads local files only.
+// To add/edit content, change seed-data.json (+ a bodies/<slug>.html for posts)
+// and re-run. See README.md.
 // ---------------------------------------------------------------------------
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -22,12 +23,14 @@ import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, ".."); // repo root (the published site)
-const read = (p) => readFileSync(join(here, p), "utf8");
+const readScript = (p) => readFileSync(join(here, p), "utf8");
+const readSite = (p) => readFileSync(join(root, p), "utf8");
+const writeSite = (p, c) => writeFileSync(join(root, p), c);
 
 const SITE = "https://sadapanna.com";
 const DEFAULT_OG = SITE + "/assets/brand/og-image.png";
 
-// Escape a value for use as HTML text or inside a double-quoted attribute.
+// Escape a value for HTML text / double-quoted attributes.
 const esc = (s) =>
   String(s == null ? "" : s).replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
@@ -42,11 +45,60 @@ const accentName = (name, accent) => {
   return safe;
 };
 
-function pageHTML(post) {
+// Replace the content between `<!-- NAME:START -->` and `<!-- NAME:END -->`.
+function replaceBlock(html, name, indent, block) {
+  const START = `<!-- ${name}:START -->`;
+  const END = `<!-- ${name}:END -->`;
+  const re = new RegExp(`${START}[\\s\\S]*?${END}`);
+  if (!re.test(html)) throw new Error(`Markers for "${name}" not found`);
+  return html.replace(re, `${START}\n${block}\n${indent}${END}`);
+}
+
+// ---- card renderers -------------------------------------------------------
+
+function projectCard(p) {
+  const cls = "card card-" + (p.cardStyle || "lav");
+  const badgeCls = "card-badge" + (p.vtIcon ? " vt-flux-icon" : "");
+  const statusCls =
+    "status" +
+    (p.statusStyle ? " status-" + p.statusStyle : "") +
+    (p.vtStatus ? " vt-flux-status" : "");
+  const inner =
+    `\n          <span class="${badgeCls}">${esc(p.emoji || "✦")}</span>` +
+    `\n          <h3>${accentName(p.title, p.accent)}</h3>` +
+    `\n          <p>${esc(p.description)}</p>` +
+    (p.status ? `\n          <span class="${statusCls}">${esc(p.status)}</span>` : "") +
+    "\n        ";
+  return p.href
+    ? `        <a class="${cls}" href="${esc(p.href)}">${inner}</a>`
+    : `        <article class="${cls}">${inner}</article>`;
+}
+
+function postCard(b) {
+  const meta =
+    `<div class="post-meta">` +
+    (b.tag ? `<span class="post-tag">${esc(b.tag)}</span>` : "") +
+    (b.date ? `<span>${esc(b.date)}</span>` : "") +
+    (b.readTime ? `<span>·</span><span>${esc(b.readTime)}</span>` : "") +
+    `</div>`;
+  return (
+    `          <a class="post-card" href="/mind/${encodeURIComponent(b.slug)}/">` +
+    `\n            <span class="post-thumb">${esc(b.emoji || "📝")}</span>` +
+    `\n            <div class="post-card-body">` +
+    `\n              ${meta}` +
+    `\n              <h2>${accentName(b.title, b.accent)}</h2>` +
+    `\n              <p>${esc(b.excerpt)}</p>` +
+    `\n            </div>\n          </a>`
+  );
+}
+
+// ---- full article page ----------------------------------------------------
+
+function articleHTML(post) {
   const url = `${SITE}/mind/${post.slug}/`;
   const desc = post.excerpt || "";
   const ogImage = post.ogImage ? SITE + post.ogImage : DEFAULT_OG;
-  const body = post.bodyFile ? read(post.bodyFile) : post.body || "";
+  const body = post.bodyFile ? readScript(post.bodyFile) : post.body || "";
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -196,12 +248,10 @@ ${body}
 `;
 }
 
-// Refresh the blog-post <url> entries in sitemap.xml between the markers.
+// ---- sitemap --------------------------------------------------------------
+
 function updateSitemap(posts) {
-  const path = join(root, "sitemap.xml");
-  let xml = readFileSync(path, "utf8");
-  const START = "<!-- BLOG_POSTS:START -->";
-  const END = "<!-- BLOG_POSTS:END -->";
+  let xml = readSite("sitemap.xml");
   const block = posts
     .map(
       (p) =>
@@ -210,28 +260,40 @@ function updateSitemap(posts) {
         `  </url>`
     )
     .join("\n");
-  const replacement = `${START}\n${block}\n  ${END}`;
-
-  if (xml.includes(START) && xml.includes(END)) {
-    xml = xml.replace(new RegExp(`${START}[\\s\\S]*${END}`), replacement);
-  } else {
-    // First run: insert the block just before </urlset>.
-    xml = xml.replace("</urlset>", `${replacement}\n</urlset>`);
-  }
-  writeFileSync(path, xml);
+  xml = replaceBlock(xml, "BLOG_POSTS", "  ", block);
+  writeSite("sitemap.xml", xml);
 }
 
-const data = JSON.parse(read("seed-data.json"));
-const posts = data.blogs || [];
+// ---- run ------------------------------------------------------------------
 
-console.log(`Building ${posts.length} article page(s)…`);
+const data = JSON.parse(readScript("seed-data.json"));
+const projects = [...(data.projects || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+const posts = [...(data.blogs || [])].sort((a, b) =>
+  String(b.createdAt || "").localeCompare(String(a.createdAt || ""))
+);
+
+// 1) Home project cards
+let index = readSite("index.html");
+index = replaceBlock(index, "PROJECTS", "        ", projects.map(projectCard).join("\n"));
+writeSite("index.html", index);
+console.log(`✓ index.html — ${projects.length} project card(s)`);
+
+// 2) /mind/ post list
+let mind = readSite("mind/index.html");
+mind = replaceBlock(mind, "POSTS", "          ", posts.map(postCard).join("\n"));
+writeSite("mind/index.html", mind);
+console.log(`✓ mind/index.html — ${posts.length} post card(s)`);
+
+// 3) Article pages
 for (const post of posts) {
   const dir = join(root, "mind", post.slug);
   mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, "index.html"), pageHTML(post));
-  console.log(`  ✓ mind/${post.slug}/index.html`);
+  writeFileSync(join(dir, "index.html"), articleHTML(post));
+  console.log(`✓ mind/${post.slug}/index.html`);
 }
 
+// 4) Sitemap
 updateSitemap(posts);
-console.log("  ✓ sitemap.xml updated");
-console.log("\nDone. Commit & push the generated pages to publish.");
+console.log("✓ sitemap.xml");
+
+console.log("\nDone. Commit & push to publish.");

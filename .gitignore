@@ -13,7 +13,3 @@ Thumbs.db
 
 # Node (if tooling is ever added)
 node_modules/
-
-# Firebase Admin service-account key — NEVER commit this
-scripts/service-account.json
-service-account.json

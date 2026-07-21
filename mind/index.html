@@ -82,29 +82,17 @@
 
     <section class="mind-list">
       <div class="container">
-        <!-- Rendered from Firestore ("blogs"), newest first. The card below is
-             a fallback shown if Firestore is unreachable or not yet seeded. -->
-        <div class="post-list" id="post-list" aria-live="polite">
-
+        <div class="post-list">
+          <!-- POSTS:START -->
           <a class="post-card" href="/mind/introducing-inkflow/">
             <span class="post-thumb">✍️</span>
             <div class="post-card-body">
-              <div class="post-meta">
-                <span class="post-tag">New</span>
-                <span>July 21, 2026</span>
-                <span>·</span>
-                <span>4 min read</span>
-              </div>
+              <div class="post-meta"><span class="post-tag">Product</span><span>July 21, 2026</span><span>·</span><span>4 min read</span></div>
               <h2>Meet <em>InkFlow</em> — turn any font into an animated write-on</h2>
-              <p>Our newest tool takes your text and any font and animates it being written, letter by letter — then
-                exports it as Lottie, MP4, GIF, or WebM. All in the browser, nothing uploaded.</p>
+              <p>Type a word, pick a font, and watch it get written on-screen, letter by letter — then download it as a Lottie, video, or GIF and drop it into your project. Free, in-browser, and nothing you type ever leaves your device.</p>
             </div>
           </a>
-
-        </div>
-        <div class="load-more-wrap" id="posts-more" hidden>
-          <button class="btn btn-outline" id="posts-more-btn" type="button">Load more <span
-              class="btn-arrow">↓</span></button>
+          <!-- POSTS:END -->
         </div>
       </div>
     </section>
@@ -123,58 +111,6 @@
       </nav>
     </div>
   </footer>
-
-  <script type="module">
-    import { fetchPage, esc, accentName } from "/assets/sada-firebase.js";
-
-    const list = document.getElementById("post-list");
-    const moreWrap = document.getElementById("posts-more");
-    const moreBtn = document.getElementById("posts-more-btn");
-    const PAGE = 6;
-    let cursor = null;
-
-    function card(b) {
-      const meta =
-        '<div class="post-meta">' +
-        (b.tag ? '<span class="post-tag">' + esc(b.tag) + "</span>" : "") +
-        (b.date ? "<span>" + esc(b.date) + "</span>" : "") +
-        (b.readTime ? "<span>·</span><span>" + esc(b.readTime) + "</span>" : "") +
-        "</div>";
-      return (
-        '<a class="post-card" href="/mind/' + encodeURIComponent(b.slug) + '/">' +
-        '<span class="post-thumb">' + esc(b.emoji || "📝") + "</span>" +
-        '<div class="post-card-body">' +
-        meta +
-        "<h2>" + accentName(b.title, b.accent) + "</h2>" +
-        "<p>" + esc(b.excerpt) + "</p>" +
-        "</div></a>"
-      );
-    }
-
-    async function load(first) {
-      try {
-        const { items, cursor: c, done } = await fetchPage("blogs", {
-          field: "createdAt",
-          dir: "desc",
-          size: PAGE,
-          cursor,
-        });
-        if (first) {
-          if (!items.length) return; // keep the static fallback card
-          list.innerHTML = "";
-        }
-        list.insertAdjacentHTML("beforeend", items.map(card).join(""));
-        cursor = c;
-        moreWrap.hidden = done;
-      } catch (err) {
-        console.warn("[blogs] using fallback card:", err);
-        moreWrap.hidden = true;
-      }
-    }
-
-    moreBtn.addEventListener("click", () => load(false));
-    load(true);
-  </script>
 </body>
 
 </html>

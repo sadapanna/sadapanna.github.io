@@ -1,97 +1,61 @@
-# Content: seeding + building
+# Content build
 
-This folder is how projects and blog posts get onto the site. You edit one JSON
-file (plus an HTML file per article), run **one command**, then commit & push.
+All the site's content lives in **one file** — [`seed-data.json`](seed-data.json)
+(plus one HTML file per article in [`bodies/`](bodies/)). A small script turns it
+into plain HTML pages. No database, no server, no credentials.
 
-## How the content is served
+## What the build generates
 
-| What | Where it comes from | Notes |
-|---|---|---|
-| Home "What's in the works" cards | Firestore `projects` (ordered by `order`) | Rendered in the browser with "Load more" |
-| `/mind/` blog list | Firestore `blogs` (ordered by `createdAt`, newest first) | Rendered in the browser with "Load more" |
-| `/mind/<slug>/` article pages | **Pre-built static HTML** from `seed-data.json` + `bodies/` | Full content in the HTML → indexes & previews correctly |
+Running `npm run build` reads `seed-data.json` and writes:
 
-Two pieces work together:
+| Output | From |
+|---|---|
+| Home "What's in the works" cards → `../index.html` | `projects` |
+| `/mind/` post list → `../mind/index.html` | `blogs` |
+| `/mind/<slug>/` article pages | `blogs` + `bodies/<slug>.html` |
+| Blog URLs in `../sitemap.xml` | `blogs` |
 
-- **Firestore** powers the *lists* (home + `/mind/`), so pagination scales as you
-  add posts. It's **view-only** to the public (see [`../firestore.rules`](../firestore.rules));
-  all writes go through the seed script, which uses the Admin SDK.
-- **Static generation** (`build-posts.mjs`) turns each post into a real
-  `/mind/<slug>/index.html` with the article, title, and social tags baked in.
-  This is what makes articles show up in Google/Bing and give proper link
-  previews in WhatsApp, Slack, LinkedIn, etc. — crawlers read the HTML as-sent
-  and mostly don't run JavaScript, so the content has to already be there.
+Everything is written as real HTML, so search engines and link-preview crawlers
+(which mostly don't run JavaScript) get the full content — that's what makes the
+articles index and preview correctly.
 
-  The old `/mind/post/?slug=…` route now just redirects to `/mind/<slug>/`.
+The generated regions in `index.html`, `mind/index.html`, and `sitemap.xml` sit
+between `<!-- NAME:START -->` / `<!-- NAME:END -->` markers — **don't edit inside
+them by hand**, the build overwrites them.
 
-## One-time setup
-
-Auth for seeding uses **Application Default Credentials (ADC)** — no key file.
-
-1. **Log in** (needs the [gcloud CLI](https://cloud.google.com/sdk/docs/install)):
-   ```bash
-   gcloud auth application-default login
-   ```
-   Use an account with write access to the Firestore project. Credentials are
-   stored locally and picked up automatically.
-
-2. **Install deps:**
-   ```bash
-   cd scripts
-   npm install
-   ```
-
-> In CI or on GCP, skip step 1 — ADC comes from the environment
-> (`GOOGLE_APPLICATION_CREDENTIALS`, or the metadata server).
-> The project id is read from [`../.firebaserc`](../.firebaserc).
-
-## Publishing (the one command)
-
-From `scripts/`:
+## Setup (once)
 
 ```bash
-npm run publish
+cd scripts
+npm install     # no dependencies — this just creates a lockfile; optional
 ```
 
-That does both steps in order:
+The script only uses Node's built-ins, so `node build.mjs` works even without
+`npm install`. Needs Node 18+.
 
-1. `node seed.mjs` — pushes `projects` + `blogs` to Firestore (powers the lists).
-2. `node build-posts.mjs` — generates the static `/mind/<slug>/` article pages and
-   refreshes the blog URLs in [`../sitemap.xml`](../sitemap.xml).
-
-Then commit & push — GitHub Pages serves the result.
+## Publishing
 
 ```bash
+cd scripts
+npm run build          # or: node build.mjs
 cd ..
 git add -A
 git commit -m "Publish: <what changed>"
-git push
+git push               # GitHub Pages serves the result
 ```
 
-Everything is idempotent (docs are keyed by `id`, pages are overwritten), so
-re-running is always safe.
-
-### Running the steps separately
-
-```bash
-npm run seed            # Firestore only (projects + blogs)
-npm run seed:projects   # just projects
-npm run seed:blogs      # just blogs
-npm run build           # just regenerate static article pages + sitemap
-```
-
-`npm run build` needs **no credentials** — it only reads local files. Handy when
-you only changed article wording and don't need to touch Firestore.
+Re-running is always safe — pages are overwritten from `seed-data.json`.
 
 ## Adding content
 
-Edit [`seed-data.json`](seed-data.json), then `npm run publish`.
+Edit [`seed-data.json`](seed-data.json), run `npm run build`, commit & push.
 
-### A new project
+### A new project (home page card)
+
+Add to the `projects` array:
 
 ```jsonc
 {
-  "id": "my-thing",          // stable doc id
   "title": "My Thing",
   "accent": "Thing",         // word wrapped in the handwritten <em> style
   "emoji": "🚀",
@@ -100,18 +64,16 @@ Edit [`seed-data.json`](seed-data.json), then `npm run publish`.
   "statusStyle": "light",    // "" | "light" | "dark"
   "cardStyle": "purple",     // "lav" | "purple" | "yellow"
   "href": "/my-thing/",      // optional — omit for a non-clickable card
-  "order": 5,                // lower = shown earlier
-  "published": true
+  "order": 5                 // lower = shown earlier
 }
 ```
 
 ### A new blog post
 
-1. Add an entry to `blogs` in `seed-data.json`:
+1. Add to the `blogs` array:
 
 ```jsonc
 {
-  "id": "my-post",
   "slug": "my-post",         // becomes the URL: /mind/my-post/
   "title": "My Post Title",
   "accent": "Post",          // word wrapped in the handwritten <em> style
@@ -127,7 +89,6 @@ Edit [`seed-data.json`](seed-data.json), then `npm run publish`.
   "tags": ["Tools", "Update"],
   "ogImage": "/path/to/share-image.png", // optional; defaults to the site OG image
   "bodyFile": "bodies/my-post.html",     // the article body
-  "published": true,
   "createdAt": "2026-08-01"  // controls list order (newest first)
 }
 ```
@@ -138,23 +99,16 @@ Edit [`seed-data.json`](seed-data.json), then `npm run publish`.
    See [`bodies/introducing-inkflow.html`](bodies/introducing-inkflow.html) for a
    full example.
 
-3. `npm run publish`, then commit & push.
+3. `npm run build`, then commit & push.
 
-The static page's `<title>`, meta description, Open Graph / Twitter tags, and
-JSON-LD `BlogPosting` schema are all generated from these fields automatically.
+The article's `<title>`, meta description, Open Graph / Twitter tags, and JSON-LD
+`BlogPosting` schema are all generated from these fields automatically.
 
-> **Note on `published`.** The field is stored for future use, but the current
-> Firestore queries order by a single field (`order` / `createdAt`) and do **not**
-> filter on it, so every document is shown. Likewise `build-posts.mjs` generates a
-> page for every blog entry. To support drafts, add `where("published","==",true)`
-> to the queries in [`../assets/sada-firebase.js`](../assets/sada-firebase.js)
-> (plus the matching composite index) and a filter in `build-posts.mjs`.
+## Notes
 
-## Deploying the security rules
-
-Only needed when the rules change (or the first time, to leave test mode):
-
-```bash
-# from the repo root
-firebase deploy --only firestore:rules
-```
+- **Ordering:** projects by `order` (ascending), posts by `createdAt` (newest
+  first).
+- **Old links:** `/mind/post/?slug=…` redirects to `/mind/<slug>/`, so anything
+  shared before the switch still works.
+- **CSS cache-busting:** the stylesheet is linked as `styles.css?v=N`. If you edit
+  `../styles.css`, bump `N` across the HTML so browsers fetch the new file.
