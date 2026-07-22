@@ -901,7 +901,7 @@ a {
   flex-direction: column;
   background: var(--white);
   border: 1px solid #e9e4f5;
-  border-radius: 20px;
+  border-radius: 6px;
   overflow: hidden;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.18s ease;
 }
