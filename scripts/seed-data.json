@@ -59,6 +59,24 @@
   ],
   "blogs": [
     {
+      "id": "fuel-from-the-sea",
+      "slug": "fuel-from-the-sea",
+      "title": "India could grow its fuel in the ocean",
+      "accent": "ocean",
+      "emoji": "🌊",
+      "coverEmoji": "🌊",
+      "coverCaption": "The ethanol in India's petrol doesn't have to come from a field. It can be brewed from seaweed — and Indian scientists already have.",
+      "tag": "Energy",
+      "date": "July 22, 2026",
+      "readTime": "8 min read",
+      "author": "Rohit Gupta",
+      "excerpt": "The ethanol India blends into every litre of petrol is distilled from thirsty sugarcane and grain. But it doesn't have to be. The same fuel can be brewed from seaweed grown in the sea — no farmland, no freshwater — and Indian scientists have already pulled it off with a salt-tolerant yeast. Here's the idea that could change where our fuel comes from, and why it isn't at the pump yet.",
+      "tags": ["Energy", "India", "Biofuel", "Oceans"],
+      "bodyFile": "bodies/fuel-from-the-sea.html",
+      "published": true,
+      "createdAt": "2026-07-22"
+    },
+    {
       "id": "introducing-inkflow",
       "slug": "introducing-inkflow",
       "title": "Meet InkFlow — turn any font into an animated write-on",
