@@ -96,7 +96,7 @@
       <header class="article-header">
         <div class="post-meta">
           <span class="post-tag">Energy</span>
-          <span>July 22, 2026</span>
+          <time class="post-date" datetime="2026-07-22T08:30:00+05:30" data-ts="2026-07-22T08:30:00+05:30">July 22, 2026</time>
           <span>·</span><span>8 min read</span>
         </div>
         <h1>India could grow its fuel in the <em>ocean</em></h1>
@@ -301,6 +301,26 @@
       </nav>
     </div>
   </footer>
+  <script>
+(function () {
+  function rel(iso) {
+    var t = new Date(iso).getTime();
+    if (isNaN(t)) return null;
+    var d = Date.now() - t;
+    if (d < 0) return null;
+    var m = Math.floor(d / 6e4);
+    if (m < 1) return "just now";
+    if (m < 60) return m + " min" + (m === 1 ? "" : "s") + " ago";
+    var h = Math.floor(m / 60);
+    if (h < 24) return h + " hour" + (h === 1 ? "" : "s") + " ago";
+    return null;
+  }
+  document.querySelectorAll(".post-date[data-ts]").forEach(function (el) {
+    var r = rel(el.getAttribute("data-ts"));
+    if (r) el.textContent = r;
+  });
+})();
+</script>
 </body>
 
 </html>

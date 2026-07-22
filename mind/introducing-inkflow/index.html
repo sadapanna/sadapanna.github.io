@@ -244,6 +244,26 @@
       </nav>
     </div>
   </footer>
+  <script>
+(function () {
+  function rel(iso) {
+    var t = new Date(iso).getTime();
+    if (isNaN(t)) return null;
+    var d = Date.now() - t;
+    if (d < 0) return null;
+    var m = Math.floor(d / 6e4);
+    if (m < 1) return "just now";
+    if (m < 60) return m + " min" + (m === 1 ? "" : "s") + " ago";
+    var h = Math.floor(m / 60);
+    if (h < 24) return h + " hour" + (h === 1 ? "" : "s") + " ago";
+    return null;
+  }
+  document.querySelectorAll(".post-date[data-ts]").forEach(function (el) {
+    var r = rel(el.getAttribute("data-ts"));
+    if (r) el.textContent = r;
+  });
+})();
+</script>
 </body>
 
 </html>

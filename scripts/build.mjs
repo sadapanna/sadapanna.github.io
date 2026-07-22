@@ -36,6 +36,43 @@ const esc = (s) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
   );
 
+// Render the post date. When a full `datetime` is present, emit a <time> the
+// client can turn into "3 hours ago" / "5 mins ago"; the human date stays as
+// the text so no-JS visitors and crawlers still see it.
+const dateCell = (b) => {
+  if (!b.date) return "";
+  if (b.datetime) {
+    return (
+      `<time class="post-date" datetime="${esc(b.datetime)}"` +
+      ` data-ts="${esc(b.datetime)}">${esc(b.date)}</time>`
+    );
+  }
+  return `<span>${esc(b.date)}</span>`;
+};
+
+// Small client script: swap recent post dates for a relative label. Older than
+// a day (or a future/invalid stamp) keeps the absolute date already in the DOM.
+const RELATIVE_TIME_SCRIPT = `<script>
+(function () {
+  function rel(iso) {
+    var t = new Date(iso).getTime();
+    if (isNaN(t)) return null;
+    var d = Date.now() - t;
+    if (d < 0) return null;
+    var m = Math.floor(d / 6e4);
+    if (m < 1) return "just now";
+    if (m < 60) return m + " min" + (m === 1 ? "" : "s") + " ago";
+    var h = Math.floor(m / 60);
+    if (h < 24) return h + " hour" + (h === 1 ? "" : "s") + " ago";
+    return null;
+  }
+  document.querySelectorAll(".post-date[data-ts]").forEach(function (el) {
+    var r = rel(el.getAttribute("data-ts"));
+    if (r) el.textContent = r;
+  });
+})();
+</script>`;
+
 // Wrap the accent word in <em> (the handwritten style), matching the site.
 const accentName = (name, accent) => {
   const safe = esc(name);
@@ -78,7 +115,7 @@ function postCard(b) {
   const meta =
     `<div class="post-meta">` +
     (b.tag ? `<span class="post-tag">${esc(b.tag)}</span>` : "") +
-    (b.date ? `<span>${esc(b.date)}</span>` : "") +
+    dateCell(b) +
     (b.readTime ? `<span>·</span><span>${esc(b.readTime)}</span>` : "") +
     `</div>`;
   return (
@@ -120,7 +157,7 @@ function articleHTML(post) {
 
   const metaRow =
     (post.tag ? `<span class="post-tag">${esc(post.tag)}</span>\n          ` : "") +
-    (post.date ? `<span>${esc(post.date)}</span>\n          ` : "") +
+    (post.date ? `${dateCell(post)}\n          ` : "") +
     (post.readTime ? `<span>·</span><span>${esc(post.readTime)}</span>` : "");
 
   const figure = post.coverEmoji
@@ -242,6 +279,7 @@ ${body}
       </nav>
     </div>
   </footer>
+  ${RELATIVE_TIME_SCRIPT}
 </body>
 
 </html>
