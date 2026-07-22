@@ -642,7 +642,8 @@ a {
 
 /* ---------- Legal pages ---------- */
 .legal {
-  padding: 48px 0 72px;
+  /* vertical only — horizontal gutter comes from .container (see .article). */
+  padding-block: 48px 72px;
   max-width: 760px;
 }
 
@@ -960,7 +961,9 @@ a {
 
 /* ---------- Article ---------- */
 .article {
-  padding: 40px 0 40px;
+  /* vertical only — horizontal gutter comes from .container, which this
+     element also carries. A shorthand with `0` sides would wipe it out. */
+  padding-block: 40px;
   max-width: 720px;
 }
 
@@ -1355,7 +1358,7 @@ a {
   }
 
   .article {
-    padding: 24px 0 32px;
+    padding-block: 24px 32px;
   }
 
   .article-header h1 {
