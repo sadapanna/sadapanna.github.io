@@ -160,11 +160,23 @@ function articleHTML(post) {
     (post.date ? `${dateCell(post)}\n          ` : "") +
     (post.readTime ? `<span>·</span><span>${esc(post.readTime)}</span>` : "");
 
-  const figure = post.coverEmoji
+  // Cover: a real image (coverImage, pre-cropped to the frame's 16:8.5 ratio)
+  // wins over the emoji frame. coverCredit is trusted HTML (may contain links).
+  const figcaption =
+    post.coverCaption || post.coverCredit
+      ? `\n        <figcaption>${esc(post.coverCaption || "")}${
+          post.coverCredit ? ` <span class="figure-credit">${post.coverCredit}</span>` : ""
+        }</figcaption>`
+      : "";
+  const figure = post.coverImage
     ? `\n      <figure class="article-figure">
-        <div class="figure-frame">${esc(post.coverEmoji)}</div>${
-          post.coverCaption ? `\n        <figcaption>${esc(post.coverCaption)}</figcaption>` : ""
-        }
+        <div class="figure-frame"><img src="${esc(post.coverImage)}" alt="${esc(
+          post.coverAlt || ""
+        )}" /></div>${figcaption}
+      </figure>\n`
+    : post.coverEmoji
+    ? `\n      <figure class="article-figure">
+        <div class="figure-frame">${esc(post.coverEmoji)}</div>${figcaption}
       </figure>\n`
     : "";
 
