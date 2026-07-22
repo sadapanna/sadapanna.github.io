@@ -77,6 +77,24 @@
       "createdAt": "2026-07-22"
     },
     {
+      "id": "surveillance-pricing",
+      "slug": "surveillance-pricing",
+      "title": "Surveillance pricing: when the price tag is about you, not the product",
+      "accent": "you",
+      "emoji": "🏷️",
+      "coverEmoji": "🏷️",
+      "coverCaption": "Same shelf, same second, two shoppers — and two different prices, decided by what the shop thinks it knows about each of them.",
+      "tag": "Privacy",
+      "date": "July 21, 2026",
+      "readTime": "8 min read",
+      "author": "The Sadapanna team",
+      "excerpt": "More and more, the price you see online isn't the product's price — it's your price. Companies are using your data to guess the most you'll pay, then charging exactly that. Here's how it works, and how to make yourself a smaller target.",
+      "tags": ["Privacy", "Data", "Essay"],
+      "bodyFile": "bodies/surveillance-pricing.html",
+      "published": true,
+      "createdAt": "2026-07-21"
+    },
+    {
       "id": "introducing-inkflow",
       "slug": "introducing-inkflow",
       "title": "Meet InkFlow — turn any font into an animated write-on",
