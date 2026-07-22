@@ -1247,6 +1247,60 @@ a {
   background: var(--purple);
 }
 
+/* Sources / references — set in the utility sans face at footnote scale so it
+   reads as apparatus, distinct from the serif article body. */
+.sources {
+  margin: 48px 0 8px;
+  padding-top: 26px;
+  border-top: 1.5px solid #efecf9;
+}
+
+.sources h2 {
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin: 0 0 16px;
+}
+
+.sources ol {
+  font-family: var(--sans);
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.sources li {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.sources li::marker {
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.sources a {
+  color: var(--purple);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.sources a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.sources .src-pub {
+  color: var(--ink);
+  font-weight: 600;
+}
+
 /* Unfold — progressive disclosure. Native <details>, so it works with no
    JavaScript and prints/indexes open-able content. Closed, each section is a
    complete news brief; open, it reveals the reporting behind the line. */
