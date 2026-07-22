@@ -59,6 +59,25 @@
   ],
   "blogs": [
     {
+      "id": "hormuz-and-your-day",
+      "slug": "hormuz-and-your-day",
+      "title": "The distant strait that sets the price of your day",
+      "accent": "day",
+      "emoji": "\ud83d\udee2\ufe0f",
+      "coverEmoji": "\ud83d\udee2\ufe0f",
+      "coverCaption": "A 40-kilometre gap between Iran and Oman shapes more of an ordinary Indian day than almost anything you'll ever see up close.",
+      "tag": "Economy",
+      "date": "July 22, 2026",
+      "datetime": "2026-07-22T18:00:00+05:30",
+      "readTime": "8 min read",
+      "author": "Rohit Gupta",
+      "excerpt": "The Strait of Hormuz is a narrow sea most Indians will never see \u2014 but a huge share of the world's oil and gas passes through it, and India buys almost all of its energy. Here's how a threat to that one strait travels, step by step, into your fuel, your kitchen, your loan, and the money your family earns in the Gulf.",
+      "tags": ["Energy", "India", "Economy", "Explainer"],
+      "bodyFile": "bodies/hormuz-and-your-day.html",
+      "published": true,
+      "createdAt": "2026-07-22"
+    },
+    {
       "id": "fuel-from-the-sea",
       "slug": "fuel-from-the-sea",
       "title": "India could grow its fuel in the ocean",
