@@ -120,7 +120,11 @@ function postCard(b) {
     `</div>`;
   return (
     `          <a class="post-card" href="/mind/${encodeURIComponent(b.slug)}/">` +
-    `\n            <span class="post-thumb">${esc(b.emoji || "📝")}</span>` +
+    `\n            <span class="post-thumb">${
+      b.coverImage
+        ? `<img src="${esc(b.coverImage)}" alt="" loading="lazy" />`
+        : esc(b.emoji || "📝")
+    }</span>` +
     `\n            <div class="post-card-body">` +
     `\n              ${meta}` +
     `\n              <h2>${accentName(b.title, b.accent)}</h2>` +
@@ -215,7 +219,7 @@ function articleHTML(post) {
 
   <link rel="preload" href="/assets/fonts/madimi-one-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="preload" href="/assets/fonts/poppins-400.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="/styles.css?v=10" />
+  <link rel="stylesheet" href="/styles.css?v=11" />
   <link rel="icon" href="/assets/brand/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" sizes="96x96" href="/assets/brand/favicon-96.png" />
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/brand/favicon-32.png" />
