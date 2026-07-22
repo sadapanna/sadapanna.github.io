@@ -183,15 +183,34 @@ fields, so fill them thoughtfully.
 
 ## 6. Build, then publish
 
+**This step is mandatory — never skip it.** Editing `seed-data.json` and the
+body fragment does nothing on its own: without the build, the article page,
+the `/mind/` list card, and the sitemap entry are never generated. (This has
+been missed before — the post's direct URL worked but it never appeared on
+`/mind/`.) Never hand-write `mind/<slug>/index.html` as a substitute.
+
 From the site root:
 
 ```bash
 cd scripts && npm run build      # or: node build.mjs   (Node 18+, no install needed)
-cd .. && git add -A && git commit -m "Publish: <short title>" && git push
+cd ..
 ```
 
 `npm run build` regenerates `mind/<slug>/index.html`, the `/mind/` list, and
 `sitemap.xml` from `seed-data.json`. Re-running is always safe.
+
+**Verify before committing** — both greps must match, from the site root:
+
+```bash
+grep -q "your-slug" mind/index.html && grep -q "your-slug" sitemap.xml \
+  && echo "OK: post is listed" || echo "BUILD MISSING — run scripts/build.mjs"
+```
+
+Only then commit and push:
+
+```bash
+git add -A && git commit -m "Publish: <short title>" && git push
+```
 
 Notes for the environment you may be running in:
 
@@ -219,7 +238,8 @@ Notes for the environment you may be running in:
 - [ ] `seed-data.json` entry added as the newest item, all fields filled,
       `slug`/`bodyFile`/`id` consistent, and the JSON still parses.
 - [ ] Body fragment is inner HTML only (no `<h1>`, no `<html>`/`<body>`).
-- [ ] Build ran clean; the new page renders and shows on `/mind/`.
+- [ ] Build ran clean; the new page renders, and the slug appears in **both**
+      `mind/index.html` and `sitemap.xml` (the greps in step 6 pass).
 - [ ] Committed; pushed (or the user has been given the push command).
 - [ ] Delivered the finished page to the user to preview, and mentioned any
       other article ideas the brainstorm could still become.
