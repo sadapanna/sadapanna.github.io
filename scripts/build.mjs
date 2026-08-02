@@ -93,18 +93,40 @@ function replaceBlock(html, name, indent, block) {
 
 // ---- card renderers -------------------------------------------------------
 
-function projectCard(p) {
-  const cls = "card card-" + (p.cardStyle || "lav");
+function projectCard(p, i) {
+  const cls =
+    "card card-" + (p.cardStyle || "lav") + (p.feature ? " card-feature" : "");
   const badgeCls = "card-badge" + (p.vtIcon ? " vt-flux-icon" : "");
   const statusCls =
     "status" +
     (p.statusStyle ? " status-" + p.statusStyle : "") +
     (p.vtStatus ? " vt-flux-status" : "");
+  const num = String(i + 1).padStart(2, "0");
+  const statusHTML = p.status
+    ? `<span class="${statusCls}">` +
+      (p.live ? `<span class="status-dot" aria-hidden="true"></span>` : "") +
+      `${esc(p.status)}</span>`
+    : "";
+  const goHTML =
+    p.href && p.cta
+      ? `<span class="card-go">${esc(p.cta)} <span class="go-arrow">↗</span></span>`
+      : "";
+  const pillsHTML =
+    Array.isArray(p.tags) && p.tags.length
+      ? `\n          <div class="card-pills" aria-hidden="true">` +
+        p.tags.map((t) => `<span class="card-pill">#${esc(t)}</span>`).join("") +
+        `</div>`
+      : "";
   const inner =
+    `\n          <span class="card-num" aria-hidden="true">${num}</span>` +
+    `\n          <span class="card-mark" aria-hidden="true">${esc(p.emoji || "✦")}</span>` +
     `\n          <span class="${badgeCls}">${esc(p.emoji || "✦")}</span>` +
     `\n          <h3>${accentName(p.title, p.accent)}</h3>` +
     `\n          <p>${esc(p.description)}</p>` +
-    (p.status ? `\n          <span class="${statusCls}">${esc(p.status)}</span>` : "") +
+    pillsHTML +
+    (statusHTML || goHTML
+      ? `\n          <div class="card-foot">${statusHTML}${goHTML}</div>`
+      : "") +
     "\n        ";
   return p.href
     ? `        <a class="${cls}" href="${esc(p.href)}">${inner}</a>`
@@ -219,7 +241,7 @@ function articleHTML(post) {
 
   <link rel="preload" href="/assets/fonts/madimi-one-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="preload" href="/assets/fonts/poppins-400.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="/styles.css?v=11" />
+  <link rel="stylesheet" href="/styles.css?v=12" />
   <link rel="icon" href="/assets/brand/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" sizes="96x96" href="/assets/brand/favicon-96.png" />
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/brand/favicon-32.png" />
