@@ -96,7 +96,13 @@ function replaceBlock(html, name, indent, block) {
 function projectCard(p, i) {
   const cls =
     "card card-" + (p.cardStyle || "lav") + (p.feature ? " card-feature" : "");
-  const badgeCls = "card-badge" + (p.vtIcon ? " vt-flux-icon" : "");
+  const badgeCls =
+    "card-badge" +
+    (p.icon ? " card-badge-img" : "") +
+    (p.vtIcon ? " vt-flux-icon" : "");
+  const badgeHTML = p.icon
+    ? `<img src="${esc(p.icon)}" alt="${esc(p.iconAlt || "")}" width="56" height="56" loading="lazy" decoding="async" />`
+    : esc(p.emoji || "✦");
   const statusCls =
     "status" +
     (p.statusStyle ? " status-" + p.statusStyle : "") +
@@ -120,7 +126,7 @@ function projectCard(p, i) {
   const inner =
     `\n          <span class="card-num" aria-hidden="true">${num}</span>` +
     `\n          <span class="card-mark" aria-hidden="true">${esc(p.emoji || "✦")}</span>` +
-    `\n          <span class="${badgeCls}">${esc(p.emoji || "✦")}</span>` +
+    `\n          <span class="${badgeCls}">${badgeHTML}</span>` +
     `\n          <h3>${accentName(p.title, p.accent)}</h3>` +
     `\n          <p>${esc(p.description)}</p>` +
     pillsHTML +

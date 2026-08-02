@@ -5,6 +5,8 @@
       "title": "Arrow Flux",
       "accent": "Flux",
       "emoji": "🎯",
+      "icon": "/assets/arrow-flux/icon-192.webp",
+      "iconAlt": "Arrow Flux app icon",
       "description": "Tap an arrow and it flies off, but only if its lane is clear. Sounds easy until the board fills up. It's free on Google Play.",
       "status": "Live now",
       "statusStyle": "gold",
