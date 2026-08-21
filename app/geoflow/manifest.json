@@ -1,10 +1,13 @@
 {
-  "name": "GeoFlow",
-  "short_name": "GeoFlow",
+  "name": "Sadapanna Geometry",
+  "short_name": "Geometry",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#fafafa",
   "theme_color": "#fafafa",
   "description": "Ultra-simple dynamic geometry canvas — construct, drag, understand.",
-  "icons": []
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
 }

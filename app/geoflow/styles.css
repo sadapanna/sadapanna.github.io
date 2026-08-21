@@ -108,14 +108,6 @@ body {
   padding: 5px 12px; border-radius: 7px; cursor: pointer;
 }
 
-#btnShift {
-  position: absolute; bottom: 14px; left: 14px;
-  border: none; background: var(--panel); color: var(--ink);
-  box-shadow: var(--shadow); font: inherit; font-size: 13px; font-weight: 600;
-  padding: 9px 13px; border-radius: 11px; cursor: pointer;
-}
-#btnShift.on { background: var(--accent); color: #fff; }
-
 #shapeMenu {
   position: absolute; z-index: 15;
   display: flex; gap: 3px; padding: 5px; align-items: center;

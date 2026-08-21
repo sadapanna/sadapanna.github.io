@@ -13,11 +13,12 @@
 <meta property="og:title" content="GeoFlow — a geometry canvas that moves">
 <meta property="og:description" content="Build a triangle, raise its perpendicular bisectors, drop the circumcircle — then drag a vertex and watch everything follow. Free, in-browser, offline-ready.">
 <meta property="og:url" content="https://sadapanna.com/app/geoflow/">
-<meta property="og:image" content="https://sadapanna.com/assets/brand/og-image.png">
+<meta property="og:image" content="https://sadapanna.com/app/geoflow/assets/og-image.png">
 <meta property="og:image:width" content="1200">
+<meta property="og:image:alt" content="GeoFlow — a free geometry canvas: drag a triangle vertex and its circumcircle follows live">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://sadapanna.com/assets/brand/og-image.png">
+<meta name="twitter:image" content="https://sadapanna.com/app/geoflow/assets/og-image.png">
 <meta name="twitter:title" content="GeoFlow — a geometry canvas that moves">
 <meta name="twitter:description" content="Dynamic geometry in the browser: construct, snap, drag, understand. Free and offline-ready.">
 
@@ -44,7 +45,8 @@
 </script>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#fafafa">
-<link rel="icon" href="/assets/brand/favicon.ico" sizes="any">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -77,8 +79,8 @@
         <ul>
           <li><b>Point / Line / Circle / Shape</b> — tap to build. Hovering shows what you'd snap to: midpoints, thirds, intersections, "on circle"…</li>
           <li><b>Move</b> — drag any blue point; everything built from it follows. Double-click a point to rename it, or a graph to edit its formula.</li>
-          <li><b>Select things → actions appear.</b> Click one object, then <b>shift-click</b> more. E.g. a segment → <i>Midpoint, ⊥ bisector, ÷n</i>; a point + a line → <i>⊥ / ∥ through it</i>; 3 points → <i>Triangle, Angle, Circle through 3</i>; two curves → <i>Intersect</i>.</li>
-          <li><b>Shift-drag from a point</b> — rubber-band a size, release, then pick <b>Circle / △ / ◻ / ⬠ / ⬡ / n</b> from the menu. The <b>⇧ Shift</b> button (bottom-left) is the same as holding Shift — handy on touch.</li>
+          <li><b>Select things → actions appear.</b> In Move mode every click adds to the selection (click again to remove; click empty space to clear). E.g. a segment → <i>Midpoint, ⊥ bisector, ÷n</i>; a point + a line → <i>⊥ / ∥ through it</i>; 3 points → <i>Triangle, Angle, Circle through 3</i>; two curves → <i>Intersect</i>.</li>
+          <li><b>Shift-drag from a point</b> — rubber-band a size, release, then pick <b>Circle / △ / ◻ / ⬠ / ⬡ / n</b> from the menu. <b>Shift-drag on empty space</b> box-selects.</li>
           <li><b>Angle snapping</b> — while drawing a line it clicks to 0°/45°/90° and to ⊥ / ∥ of lines on screen; the tag names the line (e.g. "⊥ to TU") and that line glows. Finishing on such a snap creates a <b>linked</b> ⊥/∥ — it stays true when dragged. Select it → <b>🔗 Unlink</b> to break the link (works on any derived object). Dragged points snap to grid crossings; circle radii snap to half-units.</li>
           <li><b>Graph</b> — type f(x) like <code>x^2/4</code> or <code>sin(x)</code>. Points snap onto the curve; intersect it with lines or other graphs.</li>
           <li><b>📏</b> — toggle live sizes (lengths, radii) in grid units.</li>
@@ -92,9 +94,6 @@
 
     <!-- context hint: tells the user exactly what to do next -->
     <div id="hint" aria-live="polite"></div>
-
-    <!-- on-screen Shift: sticky modifier for multi-select / shape-drag (also for touch) -->
-    <button id="btnShift" title="Shift — multi-select, rectangle-select, shape-drag from a point">⇧ Shift</button>
 
     <!-- zoom controls -->
     <div id="zoomCtrl" aria-label="Zoom">

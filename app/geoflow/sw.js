@@ -1,6 +1,7 @@
 /* Cache-first service worker: after first load the app works fully offline. */
-const CACHE = 'geoflow-v3';
-const ASSETS = ['./', './index.html', './styles.css', './engine.js', './storage.js', './app.js', './manifest.json'];
+const CACHE = 'geoflow-v4';
+const ASSETS = ['./', './index.html', './styles.css', './engine.js', './storage.js', './app.js', './manifest.json',
+  './assets/icon.svg', './assets/icon-192.png', './assets/icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));

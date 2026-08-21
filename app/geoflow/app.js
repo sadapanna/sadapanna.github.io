@@ -48,17 +48,7 @@ const saveStateEl = document.getElementById('saveState');
 const isTouch = matchMedia('(pointer: coarse)').matches;
 const TOL = () => (isTouch ? 22 : 10);
 
-/* sticky on-screen Shift (works on touch; equivalent to holding Shift) */
-let virtualShift = false;
-const btnShift = document.getElementById('btnShift');
-btnShift.addEventListener('click', () => {
-  virtualShift = !virtualShift;
-  btnShift.classList.toggle('on', virtualShift);
-  updateHint(virtualShift
-    ? 'Shift on — click objects to multi-select, drag on empty space to box-select, drag from a point to make a shape'
-    : undefined);
-});
-const isShift = (e) => e.shiftKey || virtualShift;
+const isShift = (e) => e.shiftKey;
 
 /* ================= viewport ================= */
 
@@ -1258,7 +1248,7 @@ function renderContextbar() {
     if (!engine.isDraggable(p)) addInfo(describeKind(p));
   }
   if (objs.length === 1) {
-    addInfo('shift-click another object → more');
+    addInfo('click another object to add it → more actions');
   }
 
   for (const [name, fn] of actions) {
@@ -1614,8 +1604,10 @@ canvas.addEventListener('pointerup', (e) => {
 
   // plain click
   if (tool === 'move') {
-    if (p.obj) toggleSelect(p.obj.id, isShift(e));
-    else if (!isShift(e)) { clearSelection(); requestDraw(); }
+    // selection is additive by default: each click toggles the object
+    // in/out of the selection; clicking empty space clears it
+    if (p.obj) toggleSelect(p.obj.id, true);
+    else { clearSelection(); requestDraw(); }
     return;
   }
   const snap = resolveSnap(sp);
@@ -1832,8 +1824,18 @@ function newDoc() {
 function openFiles() {
   renderFiles();
   filesPanel.hidden = false;
+  // if the toolbar sits where the panel opens, nudge it out of the way
+  const panelW = Math.min(320, window.innerWidth * 0.92);
+  const r = toolwrap.getBoundingClientRect();
+  if (r.left < panelW + 12) {
+    toolwrap.style.transition = 'margin-left .2s';
+    toolwrap.style.marginLeft = (panelW + 12 - r.left) + 'px';
+  }
 }
-function closeFiles() { filesPanel.hidden = true; }
+function closeFiles() {
+  filesPanel.hidden = true;
+  toolwrap.style.marginLeft = '';
+}
 
 function renderFiles() {
   const files = Store.listFiles();
