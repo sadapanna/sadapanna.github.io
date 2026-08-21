@@ -1,0 +1,10 @@
+{
+  "name": "GeoFlow",
+  "short_name": "GeoFlow",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#fafafa",
+  "theme_color": "#fafafa",
+  "description": "Ultra-simple dynamic geometry canvas — construct, drag, understand.",
+  "icons": []
+}

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meet GeoFlow — a geometry canvas that moves · Sadapanna Mind</title>
+  <meta name="description" content="GeoFlow is our free, in-browser geometry canvas. Build a triangle, raise its perpendicular bisectors, drop the circumcircle — then drag a corner and watch the whole construction follow. It saves on your device and works offline." />
+  <link rel="canonical" href="https://sadapanna.com/mind/introducing-geoflow/" />
+  <meta name="theme-color" content="#ffffff" />
+
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Sadapanna" />
+  <meta property="og:title" content="Meet GeoFlow — a geometry canvas that moves" />
+  <meta property="og:description" content="Build a triangle, raise its perpendicular bisectors, drop the circumcircle — then drag a corner and watch the whole construction follow. Free, in-browser, offline-ready." />
+  <meta property="og:url" content="https://sadapanna.com/mind/introducing-geoflow/" />
+  <meta property="og:image" content="https://sadapanna.com/assets/brand/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="article:published_time" content="2026-08-21" />
+  <meta property="article:author" content="Sadapanna" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://sadapanna.com/assets/brand/og-image.png" />
+  <meta name="twitter:title" content="Meet GeoFlow — a geometry canvas that moves" />
+  <meta name="twitter:description" content="Build a triangle, raise its perpendicular bisectors, drop the circumcircle — then drag a corner and watch everything follow. Free, in-browser, offline-ready." />
+
+  <link rel="preload" href="/assets/fonts/madimi-one-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/assets/fonts/poppins-400.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="/styles.css?v=12" />
+  <link rel="icon" href="/assets/brand/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="96x96" href="/assets/brand/favicon-96.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/brand/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/brand/favicon-16.png" />
+  <link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png" />
+
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Meet GeoFlow — a geometry canvas that moves",
+  "description": "GeoFlow is our free, in-browser geometry canvas. Build a triangle, raise its perpendicular bisectors, drop the circumcircle — then drag a corner and watch the whole construction follow. It saves on your device and works offline.",
+  "image": "https://sadapanna.com/assets/brand/og-image.png",
+  "datePublished": "2026-08-21",
+  "dateModified": "2026-08-21",
+  "author": {
+    "@type": "Organization",
+    "name": "The Sadapanna team",
+    "url": "https://sadapanna.com/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Sadapanna",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://sadapanna.com/assets/brand/logo-white.png"
+    }
+  },
+  "isPartOf": {
+    "@type": "Blog",
+    "name": "Sadapanna Mind",
+    "url": "https://sadapanna.com/mind/"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://sadapanna.com/mind/introducing-geoflow/"
+  }
+}
+  </script>
+  <script type='module' src='https://static.cloudflareinsights.com/beacon.min.js'
+    data-cf-beacon='{"token": "decf7f7fdb114793be902266b9912861"}'></script>
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a class="brand" href="/">
+        <img class="brand-icon" src="/assets/brand/icon-192.webp" alt="" width="192" height="186" />
+        <span class="brand-word">Sadapanna</span>
+      </a>
+      <nav class="site-nav">
+        <a class="nav-pill" href="/#projects">Projects</a>
+        <a class="nav-pill" href="/mind/">Mind</a>
+        <a class="nav-pill" href="/#about">About</a>
+        <a class="nav-pill" href="/#contact">Contact</a>
+      </nav>
+      <a class="btn btn-outline header-cta" href="mailto:hello@sadapanna.com">Say hello <span
+          class="btn-arrow">↗</span></a>
+    </div>
+  </header>
+
+  <main>
+    <article class="container article">
+      <nav class="breadcrumb">
+        <a href="/mind/">Mind</a><span>/</span>GeoFlow
+      </nav>
+
+      <header class="article-header">
+        <div class="post-meta">
+          <span class="post-tag">Product</span>
+          <span>August 21, 2026</span>
+          <span>·</span><span>5 min read</span>
+        </div>
+        <h1>Meet <em>GeoFlow</em> — a geometry canvas that moves</h1>
+        <p class="article-lede">Build a triangle, raise its perpendicular bisectors, drop the circumcircle — then grab a corner and drag. The bisectors tilt, the center slides, the circle re-fits itself, and the theorem you half-remembered from school suddenly makes sense. Free, in your browser, and it works offline.</p>
+        <div class="byline">
+          <img src="/assets/brand/icon-192.webp" alt="" />
+          <div>
+            <div class="byline-name">The Sadapanna team</div>
+            <div class="byline-sub">Published August 21, 2026</div>
+          </div>
+        </div>
+      </header>
+
+      <figure class="article-figure">
+        <div class="figure-frame">📐</div>
+        <figcaption>Every construction in GeoFlow stays true while you drag — that's the whole point.</figcaption>
+      </figure>
+
+      <div class="prose">
+<p>GeoFlow started with a small moment of disbelief. One of us was reading about circles and hit this line: through any
+  three points that aren't on a straight line, there is exactly <em>one</em> circle. Not "at least one". Exactly one.
+  That felt like something you should be able to <em>see</em>, not just accept. Draw three dots, find the circle, move
+  a dot, watch the circle chase it. Simple.</p>
+
+<p>Except doing that in existing tools wasn't simple. The good ones — and some are genuinely good — greet you with
+  sixty-odd tools folded into nested menus. To build the circle properly you pick the polygon tool, then the
+  perpendicular-bisector tool, then an intersection tool, then a circle tool, clicking objects in an order the
+  software never explains. We counted once: about eighteen clicks across ten tool switches. By the end you've made the
+  picture, but you've stopped thinking about the geometry.</p>
+
+<p>So we built the tool we wished we'd had that afternoon. <strong>GeoFlow</strong> is a free geometry canvas with one
+  rule behind every decision: the construction is the lesson, so getting there should be almost effortless — and once
+  it's there, it should <em>move</em>.</p>
+
+<h2>Five tools, and the rest <em>finds you</em></h2>
+<p>GeoFlow's toolbar has five things on it: Move, Point, Line, Circle, Shape. (Plus a Graph button — more on that
+  below.) Everything else appears only when it's relevant. Select a segment and you're offered its midpoint, its
+  perpendicular bisector, or a divide-into-n. Select three points and you're offered a triangle, the angle between
+  them, or the circle through all three. Select two curves and you're offered their intersection.</p>
+
+<p>This sounds like a small design choice. It changes everything. You never hunt through a menu for a tool whose name
+  you don't know yet — you point at the things you care about, and the geometry that's possible with them shows up as
+  buttons.</p>
+
+<h2>Snapping that tells you <em>what it's doing</em></h2>
+<p>A quiet frustration in most geometry software: you place a point that <em>looks</em> like it's on the line, but
+  isn't. Everything seems fine until you drag something and your construction falls apart, because the point was never
+  actually attached. Teachers call this the drag test, and half of a beginner's constructions fail it.</p>
+
+<p>GeoFlow won't let that happen silently. Before you click, it names what you're about to attach to — a little tag
+  that reads <em>Midpoint</em>, or <em>1/3 point</em>, or <em>Intersection of TU, VW</em>, or <em>On circle</em> —
+  and highlights the object in question. If the tag isn't showing, you're placing a free point. There's no ambiguity
+  to discover three steps later.</p>
+
+<ul>
+  <li><strong>Points</strong> snap to midpoints, thirds, quarters — any n-section of a segment — plus intersections,
+    centers, and grid crossings.</li>
+  <li><strong>Lines</strong> snap to clean angles and to perpendicular or parallel with any line on screen, and the
+    tag names which one ("⊥ to TU") while that line glows.</li>
+  <li><strong>Circles</strong> snap their radius to tidy values while you draw, so "a circle of radius 2" takes one
+    drag, not a coordinate dialog.</li>
+</ul>
+
+<h2>Linked until you say <em>otherwise</em></h2>
+<p>Here's our favorite detail. When you finish a line on that "⊥ to TU" snap, GeoFlow doesn't just draw a line that
+  happens to be perpendicular right now. It records the relationship. Rotate the original line later and your
+  perpendicular turns with it, exactly, forever. The right angle is a fact of the construction, not an accident of
+  where you clicked.</p>
+
+<p>And when you don't want the relationship anymore, select the object and tap <strong>Unlink</strong>. It keeps its
+  position but forgets its parents — a midpoint becomes an ordinary draggable point, a bound line becomes a plain one.
+  Constraints you can see, name, and remove: that's the deal.</p>
+
+<blockquote>
+  <p>Dragging is where geometry stops being memorization. The circumcenter isn't a definition anymore — it's the point
+    you watched refuse to leave the intersection of those bisectors, no matter how hard you pulled the triangle
+    around.</p>
+</blockquote>
+
+<h2>Graphs on the same <em>canvas</em></h2>
+<p>Geometry class and graphing class use the same plane, so GeoFlow keeps them together. Type <code>x^2/4</code> or
+  <code>sin(x)*2</code> and the curve lands on the same numbered axes as your shapes. Points snap onto the curve and
+  slide along it. Lines intersect it. You can drop a few points along a parabola, box-select them, and turn them into
+  a polygon — which is a genuinely odd thing to do, and exactly the kind of odd thing that makes an idea stick.</p>
+
+<div class="feature-grid">
+  <div class="feature">
+    <span class="feature-emoji">🖐️</span>
+    <h4>Everything drags</h4>
+    <p>Free points move; everything built on them follows live — bisectors, intersections, circles, angles, measurements.</p>
+  </div>
+  <div class="feature">
+    <span class="feature-emoji">📏</span>
+    <h4>Sizes on demand</h4>
+    <p>One toggle shows live lengths and radii in grid units, updating as you drag. Turn it off and the canvas is clean again.</p>
+  </div>
+  <div class="feature">
+    <span class="feature-emoji">⬠</span>
+    <h4>Instant regular shapes</h4>
+    <p>Shift-drag from any point, pick triangle to hexagon or type n. The polygon stays perfectly regular while you resize it.</p>
+  </div>
+  <div class="feature">
+    <span class="feature-emoji">🔗</span>
+    <h4>Visible dependencies</h4>
+    <p>Hover anything and the objects it was built from light up. No mystery about why the center moved.</p>
+  </div>
+</div>
+
+<h2>Yours, on your <em>device</em></h2>
+<p>GeoFlow has no accounts and no server doing the math. Constructions save automatically to your browser — open the
+  files panel and yesterday's work is there, thumbnails and all. You can export any construction as a small JSON file
+  and hand it to someone, and once the page has loaded once, the whole app works with no connection at all.</p>
+
+<div class="callout">
+  <span class="callout-icon">🔒</span>
+  <p><strong>Nothing you draw leaves your device.</strong> Same rule as InkFlow, same rule as everything we make:
+    local first, no accounts, no data to sell because we never collect it.</p>
+</div>
+
+<p>The offline part matters more than it sounds. A classroom with flaky wifi, a tablet on a train, a kid at a kitchen
+  table with mobile data that ran out — the canvas doesn't care. It's already there.</p>
+
+<h2>Who we <em>made it for</em></h2>
+<p>Students meeting constructions for the first time. Teachers who want to show, not tell — the first thing GeoFlow
+  opens with is that three-points-one-circle demo, ready to drag. And honestly, anyone who liked geometry once and
+  wants to push shapes around for twenty minutes. It runs on anything with a browser, mouse or touch.</p>
+
+<div class="try-banner">
+  <h3>Open <em>GeoFlow</em></h3>
+  <p>It's free and it loads straight into the canvas, with the circumcircle demo waiting. Drag a corner and see for yourself.</p>
+  <a class="btn btn-primary" href="/app/geoflow/">Open GeoFlow <span class="btn-arrow">↗</span></a>
+</div>
+
+<p>GeoFlow joins InkFlow as the second tool you can use on the site right now, free, no sign-up. If you build
+  something worth showing off — or find a construction it can't handle — we want to hear about it:
+  <a href="mailto:hello@sadapanna.com">hello@sadapanna.com</a>.</p>
+
+      </div>
+
+      <div class="article-foot">
+        <a class="back-link" href="/mind/">← Back to Mind</a>
+        <div class="article-tags"><span class="post-tag">GeoFlow</span><span class="post-tag">Tools</span><span class="post-tag">Education</span></div>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <span>© 2026 Sadapanna <img class="foot-icon" src="/assets/brand/icon-192.webp" alt="" width="192"
+          height="186" /> made slowly</span>
+      <nav class="footer-links">
+        <a href="/mind/">Mind</a>
+        <a href="/privacy/">Privacy</a>
+        <a href="/terms/">Terms</a>
+        <a href="/backyard/">Backyard</a>
+        <a href="/#contact">Contact</a>
+      </nav>
+    </div>
+  </footer>
+  <script>
+(function () {
+  function rel(iso) {
+    var t = new Date(iso).getTime();
+    if (isNaN(t)) return null;
+    var d = Date.now() - t;
+    if (d < 0) return null;
+    var m = Math.floor(d / 6e4);
+    if (m < 1) return "just now";
+    if (m < 60) return m + " min" + (m === 1 ? "" : "s") + " ago";
+    var h = Math.floor(m / 60);
+    if (h < 24) return h + " hour" + (h === 1 ? "" : "s") + " ago";
+    return null;
+  }
+  document.querySelectorAll(".post-date[data-ts]").forEach(function (el) {
+    var r = rel(el.getAttribute("data-ts"));
+    if (r) el.textContent = r;
+  });
+})();
+</script>
+</body>
+
+</html>

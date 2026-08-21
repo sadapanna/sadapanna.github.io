@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>GeoFlow — Free Dynamic Geometry Canvas That Moves | Sadapanna</title>
+<meta name="description" content="GeoFlow is a free online geometry canvas. Draw points, lines, circles, polygons and function graphs, snap to midpoints and intersections, then drag anything — every dependent construction follows live. Works offline, saves in your browser, nothing uploaded.">
+<link rel="canonical" href="https://sadapanna.com/app/geoflow/">
+<meta name="robots" content="index, follow">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sadapanna">
+<meta property="og:title" content="GeoFlow — a geometry canvas that moves">
+<meta property="og:description" content="Build a triangle, raise its perpendicular bisectors, drop the circumcircle — then drag a vertex and watch everything follow. Free, in-browser, offline-ready.">
+<meta property="og:url" content="https://sadapanna.com/app/geoflow/">
+<meta property="og:image" content="https://sadapanna.com/assets/brand/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://sadapanna.com/assets/brand/og-image.png">
+<meta name="twitter:title" content="GeoFlow — a geometry canvas that moves">
+<meta name="twitter:description" content="Dynamic geometry in the browser: construct, snap, drag, understand. Free and offline-ready.">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "GeoFlow",
+  "url": "https://sadapanna.com/app/geoflow/",
+  "applicationCategory": "EducationalApplication",
+  "operatingSystem": "Any (runs in browser)",
+  "description": "GeoFlow is a free dynamic geometry tool. Construct points, segments, circles, polygons and function graphs with named snapping (midpoints, n-section points, intersections), build linked perpendiculars and circumcircles, and drag any point to see every dependent object update live. Saves constructions locally and works offline.",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "featureList": [
+    "Live dragging: dependent constructions (bisectors, intersections, circumcircles) follow in real time",
+    "Named snap previews: midpoints, thirds, n-section points, intersections, points on curves",
+    "Linked perpendicular and parallel lines that stay true when dragged, with one-tap unlink",
+    "Function graphs y=f(x) with points and intersections on the curve",
+    "Regular polygon builder, angle measures, toggleable lengths and radii",
+    "Autosaves to the browser, exports JSON, works fully offline"
+  ],
+  "publisher": { "@type": "Organization", "name": "Sadapanna", "url": "https://sadapanna.com/" }
+}
+</script>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#fafafa">
+<link rel="icon" href="/assets/brand/favicon.ico" sizes="any">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main id="stage">
+    <canvas id="canvas"></canvas>
+
+    <!-- top bar: file name + undo/redo + menu -->
+    <header id="topbar">
+      <button id="btnFiles" class="chip" title="My files">☰</button>
+      <input id="docName" value="Untitled" spellcheck="false" aria-label="File name">
+      <span id="saveState" aria-live="polite"></span>
+      <span class="spacer"></span>
+      <button id="btnMeasure" class="chip" title="Show sizes (lengths, radii)">📏</button>
+      <button id="btnHelp" class="chip" title="Help">?</button>
+      <button id="btnUndo" class="chip" title="Undo (Ctrl+Z)">↶</button>
+      <button id="btnRedo" class="chip" title="Redo (Ctrl+Y)">↷</button>
+    </header>
+
+    <!-- the whole tool UI: one draggable strip, few big buttons -->
+    <div id="toolwrap">
+      <nav id="toolbar" aria-label="Tools">
+        <div id="toolgrip" title="Drag to move toolbar">⠿</div>
+      </nav>
+    </div>
+
+    <!-- help overlay -->
+    <div id="helpPanel" hidden>
+      <div class="help-card">
+        <div class="panel-head"><strong>How it works</strong><button id="btnCloseHelp" class="chip">✕</button></div>
+        <ul>
+          <li><b>Point / Line / Circle / Shape</b> — tap to build. Hovering shows what you'd snap to: midpoints, thirds, intersections, "on circle"…</li>
+          <li><b>Move</b> — drag any blue point; everything built from it follows. Double-click a point to rename it, or a graph to edit its formula.</li>
+          <li><b>Select things → actions appear.</b> Click one object, then <b>shift-click</b> more. E.g. a segment → <i>Midpoint, ⊥ bisector, ÷n</i>; a point + a line → <i>⊥ / ∥ through it</i>; 3 points → <i>Triangle, Angle, Circle through 3</i>; two curves → <i>Intersect</i>.</li>
+          <li><b>Shift-drag from a point</b> — rubber-band a size, release, then pick <b>Circle / △ / ◻ / ⬠ / ⬡ / n</b> from the menu. The <b>⇧ Shift</b> button (bottom-left) is the same as holding Shift — handy on touch.</li>
+          <li><b>Angle snapping</b> — while drawing a line it clicks to 0°/45°/90° and to ⊥ / ∥ of lines on screen; the tag names the line (e.g. "⊥ to TU") and that line glows. Finishing on such a snap creates a <b>linked</b> ⊥/∥ — it stays true when dragged. Select it → <b>🔗 Unlink</b> to break the link (works on any derived object). Dragged points snap to grid crossings; circle radii snap to half-units.</li>
+          <li><b>Graph</b> — type f(x) like <code>x^2/4</code> or <code>sin(x)</code>. Points snap onto the curve; intersect it with lines or other graphs.</li>
+          <li><b>📏</b> — toggle live sizes (lengths, radii) in grid units.</li>
+          <li><b>Shape tool presets</b> — pick △ ◻ ⬠ ⬡ (or type n) in the row under the toolbar, tap a center, tap a corner. Drag <i>any</i> corner to rotate/resize it; drag the center to move the whole shape.</li>
+          <li><b>Dragging snaps too</b> — a moving point grabs onto other points, midpoints, intersections, curves and the grid, with the same named tags as when placing.</li>
+          <li><b>Keyboard</b> — tools: <b>M/V</b> move, <b>P</b> point, <b>L</b> line, <b>C</b> circle, <b>S</b> shape, <b>G</b> graph (or <b>1–6</b>). <b>Arrows</b> nudge the selection (Shift = bigger steps) · <b>U</b> unlink · <b>H</b> hide · <b>Del</b> delete · <b>Esc</b> cancels a step · <b>Ctrl+Z / Ctrl+Y</b> undo/redo · <b>+ / − / 0</b> zoom.</li>
+          <li>Work saves automatically — ☰ opens your files. Everything runs offline.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- context hint: tells the user exactly what to do next -->
+    <div id="hint" aria-live="polite"></div>
+
+    <!-- on-screen Shift: sticky modifier for multi-select / shape-drag (also for touch) -->
+    <button id="btnShift" title="Shift — multi-select, rectangle-select, shape-drag from a point">⇧ Shift</button>
+
+    <!-- zoom controls -->
+    <div id="zoomCtrl" aria-label="Zoom">
+      <button id="zoomIn" class="chip" title="Zoom in (+)">＋</button>
+      <button id="zoomReset" class="chip" title="Reset view (0)">⌂</button>
+      <button id="zoomOut" class="chip" title="Zoom out (−)">−</button>
+    </div>
+
+    <!-- context actions for a selected object (appears near selection) -->
+    <div id="contextbar" hidden></div>
+
+    <!-- files drawer -->
+    <div id="filesPanel" hidden>
+      <div class="panel-head">
+        <strong>My constructions</strong>
+        <button id="btnCloseFiles" class="chip" title="Collapse">❮</button>
+      </div>
+      <div id="filesList"></div>
+      <div class="panel-foot">
+        <button id="btnNew">New</button>
+        <button id="btnExport">Export file</button>
+        <button id="btnImport">Import file</button>
+        <input id="importInput" type="file" accept=".json,application/json" hidden>
+      </div>
+    </div>
+  </main>
+
+  <script src="engine.js"></script>
+  <script src="storage.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
