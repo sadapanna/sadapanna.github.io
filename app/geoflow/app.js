@@ -938,6 +938,11 @@ const GRAPH_CHIPS = [
   ['1/x', '1/x'], ['eˣ', 'exp(x)'], ['ln x', 'ln(x)'], ['π', 'pi'],
 ];
 
+/* tappable operator keys — nothing has to be typed by hand */
+const GRAPH_OPS = [
+  ['x', 'x'], ['+', '+'], ['−', '-'], ['×', '*'], ['÷', '/'], ['^', '^'], ['( )', '()'], ['⌫', '\b'],
+];
+
 function closeGraphInput() {
   const gi = document.getElementById('graphInput');
   if (gi) gi.remove();
@@ -962,7 +967,16 @@ function toggleGraphInput(prefill, editId) {
     </div>
     <div class="gi-sug" hidden></div>
     <div class="gi-msg">Use <b>x</b> as the variable · <b>^</b> for powers · functions need brackets, like sin(x)</div>
-    <div class="gi-chips"></div>`;
+    <div class="gi-chips gi-ops"></div>
+    <div class="gi-chips"></div>
+    <div class="gi-lims">
+      <span>Limits</span>
+      x: <input class="gi-lim" data-k="xmin" placeholder="−∞" inputmode="decimal">
+      → <input class="gi-lim" data-k="xmax" placeholder="∞" inputmode="decimal">
+      <em>·</em>
+      y: <input class="gi-lim" data-k="ymin" placeholder="−∞" inputmode="decimal">
+      → <input class="gi-lim" data-k="ymax" placeholder="∞" inputmode="decimal">
+    </div>`;
   toolwrap.appendChild(gi);
 
   const input = gi.querySelector('input');
@@ -971,27 +985,45 @@ function toggleGraphInput(prefill, editId) {
   const defaultMsg = msgEl.innerHTML;
   let sugs = [], sugIndex = 0;
 
-  // quick-insert chips
-  const chipsEl = gi.querySelector('.gi-chips');
-  for (const [label, code] of GRAPH_CHIPS) {
+  // quick-insert chips + operator keys
+  const addChip = (parent, label, code) => {
     const b = document.createElement('button');
     b.type = 'button';
     b.textContent = label;
     b.addEventListener('mousedown', (ev) => ev.preventDefault()); // keep input focus
     b.addEventListener('click', () => {
-      insertAtCaret(input, input.value.trim() ? code : code);
+      if (code === '\b') deleteAtCaret(input);
+      else insertAtCaret(input, code);
       refresh();
     });
-    chipsEl.appendChild(b);
-  }
+    parent.appendChild(b);
+  };
+  const opsEl = gi.querySelector('.gi-ops');
+  for (const [label, code] of GRAPH_OPS) addChip(opsEl, label, code);
+  const chipsEl = gi.querySelector('.gi-chips:not(.gi-ops)');
+  for (const [label, code] of GRAPH_CHIPS) addChip(chipsEl, label, code);
 
   function insertAtCaret(el, text) {
     const s = el.selectionStart ?? el.value.length, epos = el.selectionEnd ?? s;
     el.value = el.value.slice(0, s) + text + el.value.slice(epos);
     // land the caret inside freshly inserted brackets
     const inner = text.indexOf('(x)');
-    const caret = inner >= 0 ? s + inner + 3 : (text.endsWith('(') ? s + text.length : s + text.length);
+    const caret = inner >= 0 ? s + inner + 3
+      : text === '()' ? s + 1
+      : s + text.length;
     el.setSelectionRange(caret, caret);
+    el.focus();
+  }
+
+  function deleteAtCaret(el) {
+    const s = el.selectionStart ?? el.value.length, epos = el.selectionEnd ?? s;
+    if (s !== epos) {
+      el.value = el.value.slice(0, s) + el.value.slice(epos);
+      el.setSelectionRange(s, s);
+    } else if (s > 0) {
+      el.value = el.value.slice(0, s - 1) + el.value.slice(s);
+      el.setSelectionRange(s - 1, s - 1);
+    }
     el.focus();
   }
 
@@ -1029,6 +1061,15 @@ function toggleGraphInput(prefill, editId) {
     refresh();
   }
 
+  function readLimits() {
+    const lims = {};
+    for (const el of gi.querySelectorAll('.gi-lim')) {
+      const v = parseFloat(el.value.replace('−', '-'));
+      if (Number.isFinite(v)) lims[el.dataset.k] = v;
+    }
+    return lims;
+  }
+
   function refresh() {
     // autocomplete for the word being typed (but not the bare variable x)
     const w = currentWord();
@@ -1046,7 +1087,7 @@ function toggleGraphInput(prefill, editId) {
       graphPreviewFn = null;
       msgEl.innerHTML = defaultMsg;
     } else {
-      const fn = window.Geo.compileExpr(expr);
+      const fn = window.Geo.boundFn(window.Geo.compileExpr(expr), readLimits());
       graphPreviewFn = fn;
       if (fn) {
         msgEl.innerHTML = '✓ looks good — <b>Enter</b> to plot';
@@ -1069,11 +1110,12 @@ function toggleGraphInput(prefill, editId) {
       msgEl.innerHTML = 'Could not read that — try <b>x^2/4</b>, <b>sin(x)*2</b>, or <b>1/x</b>';
       return;
     }
+    const params = { expr, ...readLimits() };
     if (graphEditTarget && engine.get(graphEditTarget)) {
-      engine.get(graphEditTarget).params.expr = expr;
+      engine.get(graphEditTarget).params = params;
       engine.recomputeAll();
     } else {
-      engine.add({ type: 'function', kind: 'graph', parents: [], params: { expr } });
+      engine.add({ type: 'function', kind: 'graph', parents: [], params });
     }
     commit();
     closeGraphInput();
@@ -1105,8 +1147,23 @@ function toggleGraphInput(prefill, editId) {
   input.addEventListener('input', refresh);
   input.addEventListener('click', refresh);
 
+  for (const el of gi.querySelectorAll('.gi-lim')) {
+    el.addEventListener('input', refresh);
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') go();
+      if (e.key === 'Escape') closeGraphInput();
+      e.stopPropagation();
+    });
+  }
+
   if (typeof prefill === 'string') input.value = prefill;
   graphEditTarget = editId || null;
+  if (editId && engine.get(editId)) {
+    const pr = engine.get(editId).params;
+    for (const el of gi.querySelectorAll('.gi-lim')) {
+      if (Number.isFinite(pr[el.dataset.k])) el.value = pr[el.dataset.k];
+    }
+  }
   refresh();
   input.focus();
   if (prefill) input.setSelectionRange(input.value.length, input.value.length);

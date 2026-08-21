@@ -145,6 +145,26 @@ body {
 }
 #graphInput .gi-chips button:hover { background: var(--accent); color: #fff; }
 
+#graphInput .gi-ops button {
+  background: var(--bg); color: var(--ink);
+  min-width: 40px; border-radius: 9px;
+  font-family: ui-monospace, monospace; font-size: 14px;
+}
+#graphInput .gi-ops button:hover { background: var(--accent); color: #fff; }
+
+#graphInput .gi-lims {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  font-size: 13px; color: var(--muted);
+}
+#graphInput .gi-lims span { font-weight: 700; color: var(--ink); margin-right: 2px; }
+#graphInput .gi-lims em { font-style: normal; opacity: .5; }
+#graphInput .gi-lim {
+  width: 6ch; border: 1.5px solid var(--line); outline: none;
+  font: inherit; font-size: 13px; text-align: center;
+  background: var(--bg); border-radius: 7px; padding: 4px 4px;
+}
+#graphInput .gi-lim:focus { border-color: var(--accent); }
+
 #shapeMenu {
   position: absolute; z-index: 15;
   display: flex; gap: 3px; padding: 5px; align-items: center;

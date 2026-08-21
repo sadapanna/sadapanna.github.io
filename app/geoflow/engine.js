@@ -36,6 +36,22 @@ function graphWorldY(fn, wx) {
   return Number.isFinite(y) ? -y * UNIT : NaN;
 }
 
+/* clamp a compiled f(x) to optional x/y limits (math units); outside → NaN (gap) */
+function boundFn(raw, lims) {
+  if (!raw || !lims) return raw;
+  const { xmin, xmax, ymin, ymax } = lims;
+  const num = (v) => typeof v === 'number' && Number.isFinite(v);
+  if (![xmin, xmax, ymin, ymax].some(num)) return raw;
+  return (x) => {
+    if (num(xmin) && x < xmin) return NaN;
+    if (num(xmax) && x > xmax) return NaN;
+    const y = raw(x);
+    if (num(ymin) && y < ymin) return NaN;
+    if (num(ymax) && y > ymax) return NaN;
+    return y;
+  };
+}
+
 /* ---------------- pure math ---------------- */
 
 const V = {
@@ -572,9 +588,11 @@ class Engine {
       }
 
       case 'function:graph': {
-        if (o._src !== o.params.expr) {
-          o._fn = compileExpr(o.params.expr);
-          o._src = o.params.expr;
+        const key = o.params.expr + '|' +
+          [o.params.xmin, o.params.xmax, o.params.ymin, o.params.ymax].join(',');
+        if (o._src !== key) {
+          o._fn = boundFn(compileExpr(o.params.expr), o.params);
+          o._src = key;
         }
         if (!o._fn) { o.valid = false; break; }
         break;
@@ -736,7 +754,7 @@ class Engine {
 
 /* exported for app.js (plain script include, no modules — offline-simple) */
 window.Geo = {
-  V, EPS, UNIT, Engine, compileExpr, graphWorldY,
+  V, EPS, UNIT, Engine, compileExpr, graphWorldY, boundFn,
   lineFromPoints, lineLineIntersect, lineCircleIntersect, circleCircleIntersect,
   circumcircle, footOfPerpendicular, distToSegment, closestPointOnSegment,
   polygonArea, pointInPolygon,
