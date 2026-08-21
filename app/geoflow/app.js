@@ -999,6 +999,10 @@ function updateHint(msg) {
     hintEl.textContent = 'Empty canvas — pick a tool above, or press ? for a 1-minute guide';
     return;
   }
+  if (tool === 'move' && !selection.length && engine.objects.size > 0) {
+    hintEl.textContent = 'Click things to select · drag empty space to box-select · shift-drag to pan';
+    return;
+  }
   hintEl.textContent = HINTS[key] || '';
 }
 
@@ -1137,6 +1141,7 @@ function toggleSelect(id, additive) {
     if (i >= 0) selection.splice(i, 1); else selection.push(id);
   }
   renderContextbar();
+  updateHint();
   requestDraw();
 }
 
@@ -1449,8 +1454,9 @@ canvas.addEventListener('pointerdown', (e) => {
     pdown.mode = 'shiftCircle';
   } else if (obj && obj.type === 'point' && engine.isDraggable(obj)) {
     pdown.mode = 'maybeDragPoint';
-  } else if (!obj && isShift(e) && tool === 'move') {
-    // shift-drag on empty canvas: rectangle select
+  } else if (!obj && tool === 'move' && !isShift(e)) {
+    // Move mode: dragging on empty canvas box-selects by default
+    // (shift-drag pans instead; other tools always pan on empty drag)
     pdown.mode = 'marquee';
   } else {
     pdown.mode = 'maybePan';
@@ -1561,7 +1567,18 @@ canvas.addEventListener('pointerup', (e) => {
   if (p.mode === 'dragPoint') { snapPreview = null; snapExclude = null; commit(); return; }
 
   if (p.mode === 'marquee') {
-    if (marqueeRect) {
+    if (!p.moved || !marqueeRect) {
+      // no drag happened: a plain click — a point's name label edits in
+      // place; anything else on empty space clears the selection
+      marqueeRect = null;
+      const labeled = labelHitAt(sp);
+      if (labeled) { openRenameInput(labeled); return; }
+      clearSelection();
+      updateHint();
+      requestDraw();
+      return;
+    }
+    {
       const r = marqueeRect;
       marqueeRect = null;
       const x1 = Math.min(r.x1, r.x2), x2 = Math.max(r.x1, r.x2);
@@ -1578,6 +1595,7 @@ canvas.addEventListener('pointerup', (e) => {
         if (hit) selection.push(id);
       }
       renderContextbar();
+      updateHint();
       requestDraw();
     }
     return;
@@ -1605,9 +1623,14 @@ canvas.addEventListener('pointerup', (e) => {
   // plain click
   if (tool === 'move') {
     // selection is additive by default: each click toggles the object
-    // in/out of the selection; clicking empty space clears it
+    // in/out of the selection; clicking empty space clears it.
+    // clicking a point's name label edits the name in place instead.
     if (p.obj) toggleSelect(p.obj.id, true);
-    else { clearSelection(); requestDraw(); }
+    else {
+      const labeled = labelHitAt(sp);
+      if (labeled) { openRenameInput(labeled); return; }
+      clearSelection(); updateHint(); requestDraw();
+    }
     return;
   }
   const snap = resolveSnap(sp);
@@ -1633,6 +1656,20 @@ canvas.addEventListener('dblclick', (e) => {
   }
 });
 
+/* was the click on a point's name label? (labels draw at point + (8,-8)) */
+function labelHitAt(sp) {
+  ctx.font = '600 12px system-ui, sans-serif';
+  for (const id of engine.order) {
+    const o = engine.get(id);
+    if (!o || o.type !== 'point' || !o.valid || o.hidden || !o.label) continue;
+    const s = w2s(o);
+    const w = ctx.measureText(o.label).width;
+    if (sp.x >= s.x + 5 && sp.x <= s.x + 11 + w &&
+        sp.y >= s.y - 22 && sp.y <= s.y - 2) return o;
+  }
+  return null;
+}
+
 /* inline rename box, floating right next to the point itself */
 function closeRenameInput() {
   const el = document.getElementById('renameInput');
@@ -1648,8 +1685,9 @@ function openRenameInput(pt) {
   inp.maxLength = 16;
   inp.spellcheck = false;
   inp.setAttribute('aria-label', 'Point name');
-  inp.style.left = Math.max(6, Math.min(window.innerWidth - 120, s.x + 12)) + 'px';
-  inp.style.top = Math.max(6, Math.min(window.innerHeight - 44, s.y - 38)) + 'px';
+  // sit right where the label is drawn, so it edits "in place"
+  inp.style.left = Math.max(6, Math.min(window.innerWidth - 120, s.x + 4)) + 'px';
+  inp.style.top = Math.max(6, Math.min(window.innerHeight - 44, s.y - 36)) + 'px';
   let done = false;
   const finish = (save) => {
     if (done) return;
