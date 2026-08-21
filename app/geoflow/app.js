@@ -1629,13 +1629,48 @@ canvas.addEventListener('dblclick', (e) => {
   if (obj.type === 'function') {
     toggleGraphInput(obj.params.expr, obj.id);
   } else if (obj.type === 'point') {
-    const name = prompt('Rename point', obj.label || '');
-    if (name !== null) {
-      obj.label = name.trim().slice(0, 12);
-      commit();
-    }
+    openRenameInput(obj);
   }
 });
+
+/* inline rename box, floating right next to the point itself */
+function closeRenameInput() {
+  const el = document.getElementById('renameInput');
+  if (el) el.remove();
+}
+
+function openRenameInput(pt) {
+  closeRenameInput();
+  const s = w2s(pt);
+  const inp = document.createElement('input');
+  inp.id = 'renameInput';
+  inp.value = pt.label || '';
+  inp.maxLength = 16;
+  inp.spellcheck = false;
+  inp.setAttribute('aria-label', 'Point name');
+  inp.style.left = Math.max(6, Math.min(window.innerWidth - 120, s.x + 12)) + 'px';
+  inp.style.top = Math.max(6, Math.min(window.innerHeight - 44, s.y - 38)) + 'px';
+  let done = false;
+  const finish = (save) => {
+    if (done) return;
+    done = true;
+    if (save) {
+      const name = inp.value.trim().slice(0, 16);
+      if (name !== (pt.label || '')) { pt.label = name; commit(); }
+    }
+    inp.remove();
+    requestDraw();
+  };
+  inp.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') finish(true);
+    else if (ev.key === 'Escape') finish(false);
+    ev.stopPropagation();
+  });
+  inp.addEventListener('blur', () => finish(true));
+  document.getElementById('stage').appendChild(inp);
+  inp.focus();
+  inp.select();
+}
 
 canvas.addEventListener('wheel', (e) => {
   e.preventDefault();
@@ -1805,6 +1840,7 @@ function loadDoc(fileId, name, data) {
   currentFileId = fileId;
   docName = name || 'Untitled';
   docNameEl.value = docName;
+  fitDocName();
   undoStack = []; redoStack = [];
   lastCommitted = snapshot();
   clearSelection();
@@ -1974,7 +2010,21 @@ document.getElementById('importInput').addEventListener('change', (e) => {
   if (e.target.files[0]) importFile(e.target.files[0]);
   e.target.value = '';
 });
-docNameEl.addEventListener('input', () => { docName = docNameEl.value || 'Untitled'; scheduleSave(); });
+/* grow the title field with its content so long names never get clipped */
+const docNameMeasure = document.createElement('canvas').getContext('2d');
+
+function fitDocName() {
+  docNameMeasure.font = getComputedStyle(docNameEl).font;
+  const w = docNameMeasure.measureText(docNameEl.value || 'Untitled').width;
+  docNameEl.style.width = Math.max(90, Math.ceil(w) + 26) + 'px';
+}
+
+docNameEl.addEventListener('input', () => {
+  docName = docNameEl.value || 'Untitled';
+  fitDocName();
+  scheduleSave();
+});
+fitDocName();
 
 /* ================= first-run demo ================= */
 
@@ -1995,6 +2045,7 @@ function buildDemo() {
   engine.recomputeAll();
   docName = 'Circumcircle demo';
   docNameEl.value = docName;
+  fitDocName();
   lastCommitted = snapshot();
   updateUndoButtons();
   updateHint('Drag A, B or C — the ⊥ bisectors, center O and circle all follow. ? explains everything');

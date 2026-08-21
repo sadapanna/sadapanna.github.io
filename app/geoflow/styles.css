@@ -47,7 +47,9 @@ body {
 
 #docName {
   border: none; background: transparent; font: inherit; font-weight: 600;
-  color: var(--ink); width: 11ch; padding: 6px 8px; border-radius: 8px; outline: none;
+  color: var(--ink); width: 11ch; max-width: 45vw;
+  padding: 6px 8px; border-radius: 8px; outline: none;
+  text-overflow: ellipsis;
 }
 #docName:focus { background: var(--panel); box-shadow: var(--shadow); }
 
@@ -225,6 +227,14 @@ body {
 .file-row .del:hover { color: #b91c1c; background: #fee2e2; }
 
 .empty-note { color: var(--muted); text-align: center; padding: 30px 10px; font-size: 13px; }
+
+#renameInput {
+  position: absolute; z-index: 16; width: 104px;
+  border: 2px solid var(--accent); outline: none;
+  background: var(--panel); color: var(--ink);
+  font: inherit; font-size: 14px; font-weight: 600;
+  padding: 5px 9px; border-radius: 9px; box-shadow: var(--shadow);
+}
 
 #zoomCtrl {
   position: absolute; right: 14px; bottom: 14px;
