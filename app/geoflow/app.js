@@ -112,6 +112,7 @@ function draw() {
 
   for (const o of byLayer.polygon) drawPolygon(o);
   for (const o of byLayer.curve) drawCurve(o, parentIds);
+  drawGraphLivePreview();
   for (const o of byLayer.angle) drawAngle(o);
   drawPending();
   // shift-drag shape preview: dashed circle + radius spoke from the center point
@@ -278,6 +279,27 @@ function drawFunction(o, st) {
       ctx.fillText('f(x)=' + o.params.expr, 32, Math.max(140, Math.min(canvas.clientHeight - 12, wy * view.scale + view.ty - 8)));
     }
   }
+}
+
+/* dashed preview of the formula being typed in the graph editor */
+function drawGraphLivePreview() {
+  if (!graphPreviewFn) return;
+  const w = canvas.clientWidth, H = canvas.clientHeight;
+  ctx.strokeStyle = C.sel;
+  ctx.lineWidth = 2.5;
+  ctx.setLineDash([7, 5]);
+  ctx.beginPath();
+  let pen = false;
+  for (let sx = 0; sx <= w; sx += 2) {
+    const wx = (sx - view.tx) / view.scale;
+    const wy = window.Geo.graphWorldY(graphPreviewFn, wx);
+    if (!Number.isFinite(wy)) { pen = false; continue; }
+    const sy = wy * view.scale + view.ty;
+    if (sy < -2 * H || sy > 3 * H) { pen = false; continue; }
+    if (pen) ctx.lineTo(sx, sy); else { ctx.moveTo(sx, sy); pen = true; }
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
 }
 
 function fmtUnits(worldLen) {
@@ -893,50 +915,201 @@ function updateToolbar() {
   updateHint();
 }
 
-/* --- graph input --- */
+/* --- graph editor: big input, live preview, autocomplete, chips --- */
 
-let graphEditTarget = null; // object id being edited, or null for new
+let graphEditTarget = null;   // object id being edited, or null for new
+let graphPreviewFn = null;    // compiled fn drawn as a dashed preview while typing
+
+const GRAPH_FUNCS = [
+  { t: 'sin', fn: true, d: 'sine' }, { t: 'cos', fn: true, d: 'cosine' },
+  { t: 'tan', fn: true, d: 'tangent' }, { t: 'sqrt', fn: true, d: 'square root' },
+  { t: 'abs', fn: true, d: 'absolute value' }, { t: 'ln', fn: true, d: 'natural log' },
+  { t: 'log', fn: true, d: 'natural log' }, { t: 'exp', fn: true, d: 'e^x' },
+  { t: 'asin', fn: true, d: 'inverse sine' }, { t: 'acos', fn: true, d: 'inverse cosine' },
+  { t: 'atan', fn: true, d: 'inverse tangent' }, { t: 'floor', fn: true, d: 'round down' },
+  { t: 'ceil', fn: true, d: 'round up' }, { t: 'round', fn: true, d: 'nearest whole' },
+  { t: 'min', fn: true, d: 'smaller of two' }, { t: 'max', fn: true, d: 'larger of two' },
+  { t: 'pow', fn: true, d: 'pow(x, n)' },
+  { t: 'pi', fn: false, d: 'π ≈ 3.14159' }, { t: 'e', fn: false, d: '≈ 2.71828' },
+];
+
+const GRAPH_CHIPS = [
+  ['x²', 'x^2'], ['√x', 'sqrt(x)'], ['|x|', 'abs(x)'], ['sin x', 'sin(x)'],
+  ['1/x', '1/x'], ['eˣ', 'exp(x)'], ['ln x', 'ln(x)'], ['π', 'pi'],
+];
+
+function closeGraphInput() {
+  const gi = document.getElementById('graphInput');
+  if (gi) gi.remove();
+  graphEditTarget = null;
+  graphPreviewFn = null;
+  requestDraw();
+}
 
 function toggleGraphInput(prefill, editId) {
-  let gi = document.getElementById('graphInput');
-  if (gi && prefill === undefined) { gi.remove(); graphEditTarget = null; return; }
-  if (!gi) {
-    gi = document.createElement('div');
-    gi.id = 'graphInput';
-    gi.innerHTML = '<span>f(x) =</span><input spellcheck="false" placeholder="x^2/4"><button>Plot</button>';
-    toolwrap.appendChild(gi);
-    const input = gi.querySelector('input');
-    const go = () => {
-      const expr = input.value.trim();
-      if (!expr) return;
-      if (!window.Geo.compileExpr(expr)) {
-        input.style.background = '#fee2e2';
-        updateHint('Could not read that — try x^2/4, sin(x), 2*x+1 …');
-        return;
-      }
-      if (graphEditTarget && engine.get(graphEditTarget)) {
-        engine.get(graphEditTarget).params.expr = expr;
-        engine.recomputeAll();
-      } else {
-        engine.add({ type: 'function', kind: 'graph', parents: [], params: { expr } });
-      }
-      commit();
-      gi.remove();
-      graphEditTarget = null;
-      updateHint('Tip: points snap onto the curve — try the Point tool on it');
-    };
-    gi.querySelector('button').addEventListener('click', go);
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') go();
-      if (e.key === 'Escape') { gi.remove(); graphEditTarget = null; }
-      e.stopPropagation();
-    });
-    input.addEventListener('input', () => { input.style.background = ''; });
-  }
+  const existing = document.getElementById('graphInput');
+  if (existing && prefill === undefined) { closeGraphInput(); return; }
+  closeGraphInput();
+
+  const gi = document.createElement('div');
+  gi.id = 'graphInput';
+  gi.innerHTML = `
+    <div class="gi-row">
+      <span class="gi-fx">f(x) =</span>
+      <input spellcheck="false" autocomplete="off" autocapitalize="off"
+        placeholder="try  x^2/4   or   sin(x)*2" aria-label="Function of x">
+      <button class="gi-plot">Plot</button>
+    </div>
+    <div class="gi-sug" hidden></div>
+    <div class="gi-msg">Use <b>x</b> as the variable · <b>^</b> for powers · functions need brackets, like sin(x)</div>
+    <div class="gi-chips"></div>`;
+  toolwrap.appendChild(gi);
+
   const input = gi.querySelector('input');
+  const sugEl = gi.querySelector('.gi-sug');
+  const msgEl = gi.querySelector('.gi-msg');
+  const defaultMsg = msgEl.innerHTML;
+  let sugs = [], sugIndex = 0;
+
+  // quick-insert chips
+  const chipsEl = gi.querySelector('.gi-chips');
+  for (const [label, code] of GRAPH_CHIPS) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = label;
+    b.addEventListener('mousedown', (ev) => ev.preventDefault()); // keep input focus
+    b.addEventListener('click', () => {
+      insertAtCaret(input, input.value.trim() ? code : code);
+      refresh();
+    });
+    chipsEl.appendChild(b);
+  }
+
+  function insertAtCaret(el, text) {
+    const s = el.selectionStart ?? el.value.length, epos = el.selectionEnd ?? s;
+    el.value = el.value.slice(0, s) + text + el.value.slice(epos);
+    // land the caret inside freshly inserted brackets
+    const inner = text.indexOf('(x)');
+    const caret = inner >= 0 ? s + inner + 3 : (text.endsWith('(') ? s + text.length : s + text.length);
+    el.setSelectionRange(caret, caret);
+    el.focus();
+  }
+
+  function currentWord() {
+    const pos = input.selectionStart ?? input.value.length;
+    const before = input.value.slice(0, pos);
+    const m = before.match(/[a-zA-Z]+$/);
+    return m ? { word: m[0], start: pos - m[0].length, end: pos } : null;
+  }
+
+  function renderSugs() {
+    if (!sugs.length) { sugEl.hidden = true; return; }
+    sugEl.hidden = false;
+    sugEl.innerHTML = '';
+    sugs.forEach((f, i) => {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'gi-sug-row' + (i === sugIndex ? ' active' : '');
+      row.innerHTML = `<b>${f.t}${f.fn ? '(…)' : ''}</b><span>${f.d}</span>`;
+      row.addEventListener('mousedown', (ev) => ev.preventDefault());
+      row.addEventListener('click', () => acceptSug(i));
+      sugEl.appendChild(row);
+    });
+  }
+
+  function acceptSug(i) {
+    const f = sugs[i];
+    const w = currentWord();
+    if (!f || !w) return;
+    const insert = f.fn ? f.t + '()' : f.t;
+    input.value = input.value.slice(0, w.start) + insert + input.value.slice(w.end);
+    const caret = w.start + (f.fn ? f.t.length + 1 : insert.length);
+    input.setSelectionRange(caret, caret);
+    sugs = []; renderSugs();
+    refresh();
+  }
+
+  function refresh() {
+    // autocomplete for the word being typed (but not the bare variable x)
+    const w = currentWord();
+    sugs = [];
+    if (w && w.word.toLowerCase() !== 'x') {
+      const q = w.word.toLowerCase();
+      sugs = GRAPH_FUNCS.filter((f) => f.t.startsWith(q) && f.t !== q).slice(0, 6);
+    }
+    sugIndex = 0;
+    renderSugs();
+    // live validation + on-canvas preview
+    const expr = input.value.trim();
+    input.classList.remove('bad');
+    if (!expr) {
+      graphPreviewFn = null;
+      msgEl.innerHTML = defaultMsg;
+    } else {
+      const fn = window.Geo.compileExpr(expr);
+      graphPreviewFn = fn;
+      if (fn) {
+        msgEl.innerHTML = '✓ looks good — <b>Enter</b> to plot';
+        msgEl.classList.add('ok');
+      } else {
+        msgEl.innerHTML = 'Keeps typing… brackets balanced? functions like <b>sin(x)</b> need brackets';
+        msgEl.classList.remove('ok');
+      }
+    }
+    if (!expr) msgEl.classList.remove('ok');
+    requestDraw();
+  }
+
+  const go = () => {
+    const expr = input.value.trim();
+    if (!expr) return;
+    if (!window.Geo.compileExpr(expr)) {
+      input.classList.add('bad');
+      msgEl.classList.remove('ok');
+      msgEl.innerHTML = 'Could not read that — try <b>x^2/4</b>, <b>sin(x)*2</b>, or <b>1/x</b>';
+      return;
+    }
+    if (graphEditTarget && engine.get(graphEditTarget)) {
+      engine.get(graphEditTarget).params.expr = expr;
+      engine.recomputeAll();
+    } else {
+      engine.add({ type: 'function', kind: 'graph', parents: [], params: { expr } });
+    }
+    commit();
+    closeGraphInput();
+    updateHint('Tip: points snap onto the curve — try the Point tool on it');
+  };
+
+  gi.querySelector('.gi-plot').addEventListener('click', go);
+  input.addEventListener('keydown', (e) => {
+    if (!sugEl.hidden && sugs.length) {
+      if (e.key === 'ArrowDown') { sugIndex = (sugIndex + 1) % sugs.length; renderSugs(); e.preventDefault(); e.stopPropagation(); return; }
+      if (e.key === 'ArrowUp') { sugIndex = (sugIndex + sugs.length - 1) % sugs.length; renderSugs(); e.preventDefault(); e.stopPropagation(); return; }
+      if (e.key === 'Tab' || e.key === 'Enter') { acceptSug(sugIndex); e.preventDefault(); e.stopPropagation(); return; }
+      if (e.key === 'Escape') { sugs = []; renderSugs(); e.stopPropagation(); return; }
+    }
+    // typing ")" right before an existing ")" just steps over it,
+    // so autocompleted sin() doesn't end up as sin(x))
+    if (e.key === ')' && input.value[input.selectionStart] === ')' &&
+        input.selectionStart === input.selectionEnd) {
+      input.setSelectionRange(input.selectionStart + 1, input.selectionStart + 1);
+      e.preventDefault();
+      e.stopPropagation();
+      refresh();
+      return;
+    }
+    if (e.key === 'Enter') go();
+    if (e.key === 'Escape') closeGraphInput();
+    e.stopPropagation();
+  });
+  input.addEventListener('input', refresh);
+  input.addEventListener('click', refresh);
+
   if (typeof prefill === 'string') input.value = prefill;
   graphEditTarget = editId || null;
+  refresh();
   input.focus();
+  if (prefill) input.setSelectionRange(input.value.length, input.value.length);
 }
 
 /* --- movable toolbar --- */
