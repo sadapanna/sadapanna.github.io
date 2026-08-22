@@ -1672,7 +1672,15 @@ function renderContextbar() {
       }) && !prev.parents.some((pid) => descendantsOf(p.id).has(pid));
       if (parentsOk) {
         const ghost = { ...p, kind: prev.kind, parents: prev.parents, params: prev.params };
-        actions.push(['Re-link: ' + describeLink(ghost), () => {
+        // honest labeling: when restoring the link would MOVE the point
+        // (fixed spots like a regular corner or midpoint), say so up front —
+        // the reshaped figure needs no re-linking to stay together
+        const willMove = ['midpoint', 'segMidpoint', 'segNsection', 'centerPoint', 'regularVertex']
+          .includes(prev.kind);
+        const lbl = willMove
+          ? 'Snap ' + (p.label || 'it') + ' back (' + describeLink(ghost) + ')'
+          : 'Re-link: ' + describeLink(ghost);
+        actions.push([lbl, () => {
           const wasAt = { x: p.x, y: p.y };
           p.kind = prev.kind;
           p.parents = [...prev.parents];
@@ -1755,7 +1763,7 @@ function renderContextbar() {
       if (links.length === 1) {
         links[0].apply();
         commit();
-        updateHint('Unlinked: ' + links[0].desc);
+        updateHint('Unlinked: ' + links[0].desc + ' — reshape freely; everything stays connected and moves together');
         renderContextbar();
         requestDraw();
       } else {
@@ -1924,7 +1932,7 @@ function openUnlinkMenu(links) {
     b.addEventListener('click', () => {
       link.apply();
       commit();
-      updateHint('Unlinked: ' + link.desc);
+      updateHint('Unlinked: ' + link.desc + ' — reshape freely; everything stays connected and moves together');
       renderContextbar();
       requestDraw();
     });
