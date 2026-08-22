@@ -228,6 +228,14 @@ body {
   color: var(--ink); font-size: 11px; min-width: 56px;
 }
 #toolbar button svg { width: 22px; height: 22px; }
+/* Graph opens a panel rather than switching modes — set it slightly apart */
+#toolbar button[data-tool="graph"] {
+  margin-left: 5px; position: relative;
+}
+#toolbar button[data-tool="graph"]::before {
+  content: ''; position: absolute; left: -3px; top: 8px; bottom: 8px;
+  width: 1px; background: var(--line);
+}
 #toolbar button.active { background: var(--accent); color: #fff; }
 #toolbar button.active svg * { stroke: #fff; }
 

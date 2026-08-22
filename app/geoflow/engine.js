@@ -249,14 +249,16 @@ class Engine {
     if (!o || !o.valid) return false;
     if (o.type === 'point') {
       if (o.kind === 'free') return false;
+      const prev = { kind: o.kind, parents: [...o.parents], params: { ...o.params } };
       o.kind = 'free';
       o.parents = [];
-      o.params = {};
+      o.params = { prev }; // remembered so "Re-link" can restore it
     } else if (o.type === 'segment' || o.type === 'ray' || o.type === 'line' || o.type === 'circle') {
       if (o.kind === 'frozen') return false;
+      const prev = { kind: o.kind, parents: [...o.parents], params: { ...o.params } };
       o.kind = 'frozen';
       o.parents = [];
-      o.params = {};
+      o.params = { prev };
       if (o.type !== 'circle' && !o.extent) o.extent = o.type;
     } else {
       return false; // polygons/angles stay tied to their points

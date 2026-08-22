@@ -256,10 +256,12 @@ function lineDrawPoints(o) {
   const ext = o.extent || o.type;
   if (ext === 'segment') return [a, b];
   const d = V.norm(V.sub(b, a)) || { x: 1, y: 0 };
-  // angled/tangent lines draw at a comfortable fixed screen length,
-  // centered on their anchor point, instead of running off to infinity
-  if (o.kind === 'angledAt' || o.kind === 'tangentAt') {
-    const H = 140;
+  // derived construction lines (bisectors, perpendiculars, angled, tangent)
+  // draw at a comfortable fixed screen length around their anchor instead of
+  // running edge to edge; the underlying line is still infinite for math
+  if (DERIVED_LINE_KINDS.has(o.kind)) {
+    const H = o.kind === 'angledAt' || o.kind === 'tangentAt' ? 140 : 230;
+    if (ext === 'ray') return [a, V.add(a, V.scale(d, 2 * H))];
     return [V.sub(a, V.scale(d, H)), V.add(a, V.scale(d, H))];
   }
   const L = canvas.clientWidth + canvas.clientHeight + 200;
@@ -267,6 +269,10 @@ function lineDrawPoints(o) {
   if (ext === 'ray') return [a, p2];
   return [V.sub(a, V.scale(d, L)), p2];
 }
+
+const DERIVED_LINE_KINDS = new Set([
+  'perpBisector', 'perpThrough', 'parallelThrough', 'angleBisector', 'tangentAt', 'angledAt',
+]);
 
 function drawFunction(o, st) {
   const fn = o._fn;
@@ -945,7 +951,12 @@ function initToolbarResize(handle) {
 
 function updateToolbar() {
   for (const b of toolbarEl.children) {
-    if (b.dataset && b.dataset.tool) b.classList.toggle('active', b.dataset.tool === tool);
+    if (b.dataset && b.dataset.tool) {
+      // Graph is a panel, not a mode: it lights up while its panel is open
+      b.classList.toggle('active', b.dataset.tool === 'graph'
+        ? !!document.getElementById('graphInput')
+        : b.dataset.tool === tool);
+    }
   }
   canvas.classList.toggle('tool-move', tool === 'move');
   let sub = document.getElementById('subtools');
@@ -1028,6 +1039,8 @@ function closeGraphInput() {
   if (gi) gi.remove();
   graphEditTarget = null;
   graphPreviewFn = null;
+  const gb = toolbarEl.querySelector('button[data-tool="graph"]');
+  if (gb) gb.classList.remove('active');
   requestDraw();
 }
 
@@ -1236,6 +1249,8 @@ function toggleGraphInput(prefill, editId) {
     });
   }
 
+  const gb = toolbarEl.querySelector('button[data-tool="graph"]');
+  if (gb) gb.classList.add('active');
   if (typeof prefill === 'string') input.value = prefill;
   graphEditTarget = editId || null;
   if (editId && engine.get(editId)) {
@@ -1286,6 +1301,7 @@ function placeToolwrap(x, y) {
 
 function setTool(t) {
   cancelPending(true);
+  closeGraphInput();
   tool = t;
   clearSelection();
   updateToolbar();
@@ -1590,8 +1606,26 @@ function renderContextbar() {
     const f = funcs[0];
     actions.push(['Edit f(x)', () => { toggleGraphInput(f.params.expr, f.id); }]);
   }
-  if (objs.length === 1 && objs[0].kind === 'angledAt') {
-    actions.push(['editangle', objs[0]]);
+  if (objs.length === 1) {
+    const guide = angledGuideOf(objs[0]);
+    if (guide) actions.push(['editangle', guide]);
+  }
+  // a frozen (unlinked) line/circle also remembers what it was
+  if (objs.length === 1 && objs[0].type !== 'point' && objs[0].kind === 'frozen' &&
+      objs[0].params && objs[0].params.prev) {
+    const o = objs[0], prev = o.params.prev;
+    if (prev.parents.every((pid) => { const q = engine.get(pid); return q && q.valid; })) {
+      const ghost = { ...o, kind: prev.kind, parents: prev.parents, params: prev.params };
+      actions.push(['Re-link: ' + describeLink(ghost), () => {
+        o.kind = prev.kind;
+        o.parents = [...prev.parents];
+        o.params = { ...prev.params };
+        engine.rebuildOrder();
+        engine.recomputeAll();
+        commit();
+        updateHint('Re-linked — it follows its construction again');
+      }]);
+    }
   }
   if (pts.length === 1 && objs.length === 1) {
     // a point that lives on a line (midpoint, n-section, glider, foot, …)
@@ -1621,6 +1655,26 @@ function renderContextbar() {
             ' — select it and another line for “Angle between”');
         }]);
         actions.push(['anglewidget', { p, host: null }]);
+      }
+    }
+    // an unlinked object remembers what it was — offer to restore it exactly
+    if (p.kind === 'free' && p.params && p.params.prev) {
+      const prev = p.params.prev;
+      const parentsOk = prev.parents.every((pid) => {
+        const par = engine.get(pid);
+        return par && par.valid;
+      }) && !prev.parents.some((pid) => descendantsOf(p.id).has(pid));
+      if (parentsOk) {
+        const ghost = { ...p, kind: prev.kind, parents: prev.parents, params: prev.params };
+        actions.push(['Re-link: ' + describeLink(ghost), () => {
+          p.kind = prev.kind;
+          p.parents = [...prev.parents];
+          p.params = { ...prev.params };
+          engine.rebuildOrder();
+          engine.recomputeAll();
+          commit();
+          updateHint('Re-linked — ' + (p.label || 'the point') + ' is back where it belonged');
+        }]);
       }
     }
     // a FREE point resting on a snap target can be linked (back) onto it
@@ -1783,8 +1837,37 @@ function collectLinkItems(objs) {
       },
     });
   };
+  // a point that lives ON a segment can also take the segment with it:
+  // free the point AND split the segment into two halves that meet at it
+  const segHostOf = (o) => {
+    if (o.kind === 'segMidpoint' || o.kind === 'segNsection') return engine.get(o.parents[0]);
+    if (o.kind === 'onPath') {
+      const h = engine.get(o.parents[0]);
+      return h && h.type === 'segment' && h.kind === 'twoPoint' ? h : null;
+    }
+    return null;
+  };
+  const addSplitItem = (o) => {
+    const seg = segHostOf(o);
+    if (!seg || seg.kind !== 'twoPoint') return;
+    items.push({
+      desc: `${nameOf(o)} goes free and ${nameOf(seg)} splits into two segments at it`,
+      apply: () => {
+        const [aId, bId] = seg.parents;
+        engine.detach(o.id);
+        engine.batch(() => {
+          engine.add({ type: 'segment', kind: 'twoPoint', parents: [aId, o.id], params: {} });
+          engine.add({ type: 'segment', kind: 'twoPoint', parents: [o.id, bId], params: {} });
+        });
+        if (engine.children(seg.id).length === 0) engine.delete(seg.id);
+        else seg.hidden = true;
+        engine.rebuildOrder();
+        engine.recomputeAll();
+      },
+    });
+  };
   for (const o of objs) {
-    if (o.type === 'point' && o.kind !== 'free') addItem(o);
+    if (o.type === 'point' && o.kind !== 'free') { addItem(o); addSplitItem(o); }
     else if ((o.kind === 'twoPoint' || o.type === 'polygon')) {
       for (const pid of o.parents || []) {
         const p = engine.get(pid);
@@ -1860,32 +1943,60 @@ function addAngleWidget(p, host, container) {
     if (e.key === 'Enter') go.click();
     e.stopPropagation();
   });
+  const degSign = document.createElement('span');
+  degSign.className = 'aw-lbl';
+  degSign.textContent = '°' + (host ? ' from ' + nameOf(host) : ' to curve');
   const go = document.createElement('button');
-  go.textContent = host ? '° line from ' + nameOf(host) : '° line to curve';
+  go.className = 'aw-go';
+  go.textContent = 'Add';
   go.title = host
-    ? 'New line through ' + (p.label || 'this point') + ' at this angle to ' + nameOf(host)
-    : 'New line at this angle to the curve’s tangent here';
+    ? 'Draw a segment from ' + (p.label || 'this point') + ' at this angle to ' + nameOf(host)
+    : 'Draw a segment at this angle to the curve’s tangent here';
   go.addEventListener('click', () => {
     const deg = parseFloat(inp.value.replace('−', '-'));
     if (!Number.isFinite(deg)) { inp.style.borderColor = '#ef4444'; return; }
     lastAngleDeg = deg;
-    const line = engine.add({
-      type: 'line', kind: 'angledAt',
-      parents: host ? [p.id, host.id] : [p.id],
-      params: { deg },
+    engine.batch(() => {
+      // hidden guide holds the exact angle; a glider on it is the segment's
+      // draggable endpoint, so the result is a real segment with real points
+      const guide = engine.add({
+        type: 'line', kind: 'angledAt',
+        parents: host ? [p.id, host.id] : [p.id],
+        params: { deg }, hidden: true,
+      });
+      const q = engine.add({
+        type: 'point', kind: 'onPath', parents: [guide.id], params: { t: 3 * U },
+      });
+      const seg = engine.add({ type: 'segment', kind: 'twoPoint', parents: [p.id, q.id], params: {} });
+      if (host) {
+        engine.add({ type: 'angle', kind: 'twoLines', parents: [host.id, seg.id], params: {} });
+      }
     });
-    // show the angle it makes, live, when there's a real host line
-    if (host) {
-      engine.add({ type: 'angle', kind: 'twoLines', parents: [host.id, line.id], params: {} });
-    }
     commit();
-    updateHint('Line at ' + deg + '° through ' + (p.label || 'the point') +
-      ' — it keeps that angle while things move');
+    updateHint('Segment at ' + deg + '° from ' + (p.label || 'the point') +
+      ' — drag its endpoint to set the length; select it to change the angle');
     renderContextbar();
     requestDraw();
   });
-  wrap.append(lbl, inp, go);
+  wrap.append(lbl, inp, degSign, go);
   container.appendChild(wrap);
+}
+
+/* find the angledAt guide behind whatever part of an angled segment is selected */
+function angledGuideOf(o) {
+  if (!o) return null;
+  if (o.kind === 'angledAt') return o;
+  if (o.type === 'point' && o.kind === 'onPath') {
+    const host = engine.get(o.parents[0]);
+    return host && host.kind === 'angledAt' ? host : null;
+  }
+  if (o.kind === 'twoPoint') {
+    for (const pid of o.parents) {
+      const g = angledGuideOf(engine.get(pid));
+      if (g) return g;
+    }
+  }
+  return null;
 }
 
 /* change the held angle of an existing angled line */
@@ -2079,11 +2190,26 @@ canvas.addEventListener('pointermove', (e) => {
           pdown.mode = 'dragPoint';
           canvas.classList.add('dragging');
           pdown.start = { x: pdown.obj.x, y: pdown.obj.y };
-          // dragging one of several selected points moves them all together
+          // dragging one of several selected points moves them all together;
+          // selected polygon corners bring their center+rim so shapes translate
           if (selection.includes(pdown.obj.id)) {
-            const members = selObjs().filter((o) => o.type === 'point' && o.kind === 'free');
-            if (members.length > 1 && members.some((o) => o.id === pdown.obj.id)) {
-              pdown.group = members.map((o) => ({ id: o.id, x0: o.x, y0: o.y }));
+            const selPts = selObjs().filter((o) => o.type === 'point');
+            if (selPts.length > 1) {
+              const memberIds = new Set();
+              for (const o of selPts) {
+                if (o.kind === 'free') memberIds.add(o.id);
+                else if (o.kind === 'regularVertex') {
+                  const c = engine.get(o.parents[0]), r = engine.get(o.parents[1]);
+                  if (c && c.kind === 'free') memberIds.add(c.id);
+                  if (r && r.kind === 'free') memberIds.add(r.id);
+                }
+              }
+              if (memberIds.size >= 1) {
+                pdown.group = [...memberIds].map((id) => {
+                  const o = engine.get(id);
+                  return { id, x0: o.x, y0: o.y };
+                });
+              }
             }
           }
           // never snap to yourself or anything built from you; group members
@@ -2111,22 +2237,18 @@ canvas.addEventListener('pointermove', (e) => {
           snapPreview = snap.kind !== 'free'
             ? { kind: snap.kind, label: snap.label, world: snap.world } : null;
         } else if (spinCenter) {
-          // rotating/resizing a regular polygon by a vertex:
-          // snap the spoke to 15° steps and the radius to half grid units
+          // rotating/resizing a regular polygon by a vertex: the radius moves
+          // completely freely (any size you want); only the rotation clicks
+          // gently to 15° steps — and Ctrl/Cmd turns even that off
           const rel = V.sub(wp, spinCenter);
-          let r = V.len(rel), ang = Math.atan2(rel.y, rel.x);
+          const r = V.len(rel);
+          let ang = Math.atan2(rel.y, rel.x);
           const labels = [];
           const step = Math.PI / 12;
           const snapped = Math.round(ang / step) * step;
-          if (!noSnap && Math.abs(ang - snapped) < (3.2 * Math.PI) / 180) {
+          if (!noSnap && Math.abs(ang - snapped) < (2.2 * Math.PI) / 180) {
             ang = snapped;
             labels.push(Math.round(((360 - (ang * 180) / Math.PI) % 360 + 360) % 360) + '°');
-          }
-          const rUnit = U / 2;
-          const rs = Math.round(r / rUnit) * rUnit;
-          if (!noSnap && rs > 0 && Math.abs(r - rs) * view.scale < 7) {
-            r = rs;
-            labels.push('r=' + (rs / U));
           }
           const tx = spinCenter.x + Math.cos(ang) * r, ty = spinCenter.y + Math.sin(ang) * r;
           engine.moveFree(pdown.obj.id, tx, ty);
