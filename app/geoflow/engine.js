@@ -314,14 +314,32 @@ class Engine {
       const dx = x - o.x, dy = y - o.y;
       o.x = x; o.y = y;
       // dragging the CENTER of a regular polygon translates the whole shape:
-      // shift each free rim point that spins around this center by the same delta
+      // shift each free rim point that spins around this center by the same
+      // delta — and also any corner that was unlinked and reshaped, so a
+      // deformed shape moves as one piece instead of leaving corners behind
       const rims = new Set();
+      const vertexIds = new Set();
       for (const c of this.objects.values()) {
-        if (c.kind === 'regularVertex' && c.parents[0] === id) rims.add(c.parents[1]);
+        if (c.kind === 'regularVertex' && c.parents[0] === id) {
+          rims.add(c.parents[1]);
+          vertexIds.add(c.id);
+        }
       }
+      const moved = new Set([id]);
       for (const rid of rims) {
         const rim = this.objects.get(rid);
-        if (rim && rim.kind === 'free') { rim.x += dx; rim.y += dy; }
+        if (rim && rim.kind === 'free') { rim.x += dx; rim.y += dy; moved.add(rid); }
+      }
+      if (vertexIds.size) {
+        for (const poly of this.objects.values()) {
+          if (poly.type !== 'polygon' || !poly.parents.some((pid) => vertexIds.has(pid))) continue;
+          for (const pid of poly.parents) {
+            const q = this.objects.get(pid);
+            if (q && q.kind === 'free' && !moved.has(pid) && !(q.params && q.params.role === 'center')) {
+              q.x += dx; q.y += dy; moved.add(pid);
+            }
+          }
+        }
       }
     } else if (o.kind === 'onPath') {
       const path = this.objects.get(o.parents[0]);
