@@ -256,6 +256,12 @@ function lineDrawPoints(o) {
   const ext = o.extent || o.type;
   if (ext === 'segment') return [a, b];
   const d = V.norm(V.sub(b, a)) || { x: 1, y: 0 };
+  // angled/tangent lines draw at a comfortable fixed screen length,
+  // centered on their anchor point, instead of running off to infinity
+  if (o.kind === 'angledAt' || o.kind === 'tangentAt') {
+    const H = 140;
+    return [V.sub(a, V.scale(d, H)), V.add(a, V.scale(d, H))];
+  }
   const L = canvas.clientWidth + canvas.clientHeight + 200;
   const p2 = V.add(a, V.scale(d, L));
   if (ext === 'ray') return [a, p2];
@@ -439,9 +445,10 @@ function drawPending() {
     const r = Math.min(Math.abs(cur.x - shapeBoxStart.x), Math.abs(cur.y - shapeBoxStart.y)) / 2;
     if (r > 2) {
       const c = V.mid(shapeBoxStart, cur);
+      const a0 = polyMode === 4 ? -Math.PI / 4 : -Math.PI / 2;
       ctx.beginPath();
       for (let i = 0; i <= polyMode; i++) {
-        const ang = -Math.PI / 2 + (i % polyMode) * 2 * Math.PI / polyMode;
+        const ang = a0 + (i % polyMode) * 2 * Math.PI / polyMode;
         const s = w2s({ x: c.x + Math.cos(ang) * r, y: c.y + Math.sin(ang) * r });
         if (i === 0) ctx.moveTo(s.x, s.y); else ctx.lineTo(s.x, s.y);
       }
@@ -643,6 +650,7 @@ function findSnap(screenPt) {
             kind: 'intersection',
             label: `Intersection of ${nameOf(a)}, ${nameOf(c)}`,
             world: seed,
+            spec: { kind: 'intersection', parents: [near[i].id, near[j].id], params: { branch: b } },
             make: () => {
               const ex = findExistingPoint('intersection', [a.id, c.id], seed);
               if (ex) return ex.id;
@@ -665,6 +673,7 @@ function findSnap(screenPt) {
       if (V.dist(c, screenPt) <= tol) {
         return {
           kind: 'center', label: 'Center', world: { x: o.cx, y: o.cy },
+          spec: { kind: 'centerPoint', parents: [o.id], params: {} },
           make: () => makeSpecialPoint('centerPoint', [o.id], {}),
         };
       }
@@ -694,6 +703,8 @@ function findSnap(screenPt) {
         kind: 'nsection',
         label: isMid ? 'Midpoint' : `${best.k}/${best.n} point`,
         world: best.p,
+        spec: isMid ? { kind: 'segMidpoint', parents: [o.id], params: {} }
+          : { kind: 'segNsection', parents: [o.id], params: { k: best.k, n: best.n } },
         make: () => isMid
           ? makeSpecialPoint('segMidpoint', [o.id], {})
           : makeSpecialPoint('segNsection', [o.id], { k: best.k, n: best.n }),
@@ -710,6 +721,7 @@ function findSnap(screenPt) {
         kind: 'onPath',
         label: 'On ' + (o.type === 'circle' && !o.label ? 'circle' : nameOf(o)),
         world: proj.pt,
+        spec: { kind: 'onPath', parents: [o.id], params: { t: proj.t } },
         make: () => engine.add({
           type: 'point', kind: 'onPath', parents: [o.id], params: { t: proj.t },
         }).id,
@@ -968,11 +980,15 @@ function updateToolbar() {
       inp.style.border = 'none'; inp.style.font = 'inherit'; inp.style.fontSize = '12px';
       inp.style.background = 'var(--bg)'; inp.style.borderRadius = '6px'; inp.style.textAlign = 'center';
       if (typeof polyMode === 'number' && ![3, 4, 5, 6].includes(polyMode)) inp.value = polyMode;
-      inp.addEventListener('change', () => {
+      const applyN = () => {
         const n = Math.max(3, Math.min(60, parseInt(inp.value, 10) || 0));
-        if (n >= 3) { cancelPending(true); polyMode = n; updateToolbar(); }
+        if (n >= 3 && n !== polyMode) { cancelPending(true); polyMode = n; updateToolbar(); }
+      };
+      inp.addEventListener('change', applyN);
+      inp.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') applyN();
+        e.stopPropagation();
       });
-      inp.addEventListener('keydown', (e) => e.stopPropagation());
       sub.appendChild(inp);
     }
   } else if (sub) sub.remove();
@@ -1370,9 +1386,12 @@ function toolClick(snap) {
           type: 'point', kind: 'free', parents: [], params: { role: 'center' },
           x: c.x, y: c.y,
         });
+        // squares start at -45° so their sides sit parallel to the axes;
+        // other n-gons start with a vertex straight up
+        const a0 = polyMode === 4 ? -Math.PI / 4 : -Math.PI / 2;
         const rim = engine.add({
           type: 'point', kind: 'free', parents: [], params: {},
-          x: c.x, y: c.y - r,
+          x: c.x + Math.cos(a0) * r, y: c.y + Math.sin(a0) * r,
         });
         buildRegularPolygon(center.id, rim.id, polyMode);
         commit();
@@ -1571,6 +1590,9 @@ function renderContextbar() {
     const f = funcs[0];
     actions.push(['Edit f(x)', () => { toggleGraphInput(f.params.expr, f.id); }]);
   }
+  if (objs.length === 1 && objs[0].kind === 'angledAt') {
+    actions.push(['editangle', objs[0]]);
+  }
   if (pts.length === 1 && objs.length === 1) {
     // a point that lives on a line (midpoint, n-section, glider, foot, …)
     // can raise a perpendicular there directly — no second selection needed
@@ -1601,6 +1623,24 @@ function renderContextbar() {
         actions.push(['anglewidget', { p, host: null }]);
       }
     }
+    // a FREE point resting on a snap target can be linked (back) onto it
+    if (p.kind === 'free' && !(p.params && p.params.role)) {
+      snapExclude = descendantsOf(p.id);
+      const s = findSnap(w2s(p));
+      snapExclude = null;
+      if (s && s.spec) {
+        actions.push(['Link: ' + s.label, () => {
+          p.kind = s.spec.kind;
+          p.parents = [...s.spec.parents];
+          p.params = { ...s.spec.params };
+          if (s.spec.kind === 'intersection') { p.x = s.world.x; p.y = s.world.y; }
+          engine.rebuildOrder();
+          engine.recomputeAll();
+          commit();
+          updateHint('Linked — ' + (p.label || 'the point') + ' now follows ' + s.label.toLowerCase());
+        }]);
+      }
+    }
     // a shape's center handle can be promoted to a real lettered point
     if (p.params && p.params.role === 'center') {
       actions.push(['Make it a point', () => {
@@ -1622,6 +1662,7 @@ function renderContextbar() {
   for (const [name, fn] of actions) {
     if (name === 'divider') { addDivideStepper(segs[0], actEl); continue; }
     if (name === 'anglewidget') { addAngleWidget(fn.p, fn.host, actEl); continue; }
+    if (name === 'editangle') { addAngleEditor(fn, actEl); continue; }
     const b = document.createElement('button');
     b.textContent = name;
     b.addEventListener('click', () => { fn(); renderContextbar(); requestDraw(); });
@@ -1843,6 +1884,38 @@ function addAngleWidget(p, host, container) {
     renderContextbar();
     requestDraw();
   });
+  wrap.append(lbl, inp, go);
+  container.appendChild(wrap);
+}
+
+/* change the held angle of an existing angled line */
+function addAngleEditor(line, container) {
+  const wrap = document.createElement('div');
+  wrap.className = 'stepper';
+  const lbl = document.createElement('span');
+  lbl.className = 'aw-lbl';
+  lbl.textContent = '∠';
+  const inp = document.createElement('input');
+  inp.className = 'aw-inp';
+  inp.value = line.params.deg;
+  inp.inputMode = 'decimal';
+  inp.setAttribute('aria-label', 'Angle in degrees');
+  const apply = () => {
+    const deg = parseFloat(inp.value.replace('−', '-'));
+    if (!Number.isFinite(deg)) { inp.style.borderColor = '#ef4444'; return; }
+    line.params.deg = deg;
+    engine.recomputeAll();
+    commit();
+    requestDraw();
+  };
+  inp.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') apply();
+    e.stopPropagation();
+  });
+  const go = document.createElement('button');
+  go.textContent = '° set';
+  go.title = 'Change the angle this line holds';
+  go.addEventListener('click', apply);
   wrap.append(lbl, inp, go);
   container.appendChild(wrap);
 }
@@ -2301,17 +2374,19 @@ canvas.addEventListener('wheel', (e) => {
 
 /* regular n-gon: rim is vertex 0, the rest are dependent points spun around the center */
 function buildRegularPolygon(centerId, rimId, n) {
-  const vids = [rimId];
-  for (let i = 1; i < n; i++) {
-    vids.push(engine.add({
-      type: 'point', kind: 'regularVertex',
-      parents: [centerId, rimId], params: { i, n },
-    }).id);
-  }
-  for (let i = 0; i < n; i++) {
-    engine.add({ type: 'segment', kind: 'twoPoint', parents: [vids[i], vids[(i + 1) % n]], params: {} });
-  }
-  engine.add({ type: 'polygon', kind: 'fromVertices', parents: vids, params: {} });
+  engine.batch(() => {
+    const vids = [rimId];
+    for (let i = 1; i < n; i++) {
+      vids.push(engine.add({
+        type: 'point', kind: 'regularVertex',
+        parents: [centerId, rimId], params: { i, n },
+      }).id);
+    }
+    for (let i = 0; i < n; i++) {
+      engine.add({ type: 'segment', kind: 'twoPoint', parents: [vids[i], vids[(i + 1) % n]], params: {} });
+    }
+    engine.add({ type: 'polygon', kind: 'fromVertices', parents: vids, params: {} });
+  });
 }
 
 /* ================= shape menu (after shift-drag from a point) ================= */
@@ -2699,3 +2774,4 @@ boot();
 /* test hooks */
 window.__eng = () => engine;
 window.__sel = () => [...selection];
+window.__pm = () => polyMode;

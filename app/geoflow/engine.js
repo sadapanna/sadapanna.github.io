@@ -214,9 +214,21 @@ class Engine {
       obj.label = this.nextPointLabel();
     }
     this.objects.set(obj.id, obj);
-    this.rebuildOrder();
-    this.recomputeAll();
+    if (!this._batch) {
+      this.rebuildOrder();
+      this.recomputeAll();
+    }
     return obj;
+  }
+
+  // group many add() calls into ONE rebuild+recompute (big shapes lag otherwise)
+  batch(fn) {
+    this._batch = true;
+    try { fn(); } finally {
+      this._batch = false;
+      this.rebuildOrder();
+      this.recomputeAll();
+    }
   }
 
   get(id) { return this.objects.get(id); }
