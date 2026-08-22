@@ -657,7 +657,26 @@ class Engine {
         if (!v) {
           v = lineLineIntersect(A, B);
           if (!v) { o.valid = false; break; }
-          if (V.dot(da, db) < 0) db = V.scale(db, -1); // acute sector
+          // if the crossing sits at an ENDPOINT of a segment, aim along that
+          // segment (toward its far end) so the arc hugs the drawn stroke
+          const endpointDir = (lin) => {
+            if (lin.kind !== 'twoPoint') return null;
+            for (let i = 0; i < 2; i++) {
+              const e0 = this.objects.get(lin.parents[i]);
+              const e1 = this.objects.get(lin.parents[1 - i]);
+              if (e0 && e1 && e0.valid && e1.valid && V.dist(e0, v) < 1e-6 * Math.max(1, V.dist(e0, e1)) + 1e-3) {
+                return V.norm(V.sub(e1, v));
+              }
+            }
+            return null;
+          };
+          const fa = endpointDir(la), fb = endpointDir(lb);
+          if (fa) da = fa;
+          if (fb) db = fb;
+          // make the free direction(s) hug the anchored one: acute sector
+          if (fa && !fb) { if (V.dot(da, db) < 0) db = V.scale(db, -1); }
+          else if (fb && !fa) { if (V.dot(da, db) < 0) da = V.scale(da, -1); }
+          else if (!fa && !fb) { if (V.dot(da, db) < 0) db = V.scale(db, -1); }
         }
         o.x = v.x; o.y = v.y;
         o.a1 = V.angle(da); o.a2 = V.angle(db);
