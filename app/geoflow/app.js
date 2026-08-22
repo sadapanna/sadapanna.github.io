@@ -798,6 +798,12 @@ function directionSnap(fromPt, wp) {
 
 /* full snap for tool clicks: object snaps win, then direction, then grid/free */
 function resolveSnap(sp) {
+  // preset shapes place their box corners EXACTLY under the cursor —
+  // no grid, no magnets — so sizing a shape is fully deterministic
+  if (tool === 'polygon' && typeof polyMode === 'number') {
+    const w = s2w(sp);
+    return { kind: 'free', label: '', world: w, make: () => makeFreePoint(w) };
+  }
   let s = findSnap(sp);
   const drawingFrom =
     (tool === 'line' && pending.length === 1) || (tool === 'polygon' && pending.length >= 1)
