@@ -651,6 +651,39 @@ class Engine {
         break;
       }
 
+      case 'line:angledAt': {
+        // a line through a point, rotated params.deg° from a base direction:
+        // the host line (2 parents), or the tangent of the curve the point rides
+        const p = parents[0];
+        let base = null;
+        if (parents.length === 2) {
+          const L = this.asLine(parents[1]);
+          base = L && L.d;
+        } else if (p.kind === 'onPath') {
+          const host = this.objects.get(p.parents[0]);
+          if (host && host.valid) {
+            if (host.type === 'circle') {
+              base = V.norm(V.perp(V.sub(p, { x: host.cx, y: host.cy })));
+            } else if (host.type === 'function' && host._fn) {
+              const h = 0.5;
+              const y1 = graphWorldY(host._fn, p.x - h), y2 = graphWorldY(host._fn, p.x + h);
+              if (Number.isFinite(y1) && Number.isFinite(y2)) base = V.norm({ x: 2 * h, y: y2 - y1 });
+            } else {
+              const L = this.asLine(host);
+              base = L && L.d;
+            }
+          }
+        }
+        if (!base) { o.valid = false; break; }
+        const a = (-(o.params.deg || 0) * Math.PI) / 180; // positive deg turns CCW on screen
+        const d = {
+          x: base.x * Math.cos(a) - base.y * Math.sin(a),
+          y: base.x * Math.sin(a) + base.y * Math.cos(a),
+        };
+        this.setLine(o, { x: p.x, y: p.y }, d, 'line');
+        break;
+      }
+
       case 'line:tangentAt': {
         // tangent to the host curve at a glider point
         const p = parents[0];

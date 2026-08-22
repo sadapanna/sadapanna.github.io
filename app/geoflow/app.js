@@ -51,6 +51,16 @@ const TOL = () => (isTouch ? 22 : 10);
 
 const isShift = (e) => e.shiftKey;
 
+/* Ctrl/Cmd held = suppress ALL snapping, everywhere (moving AND creating) */
+let modNoSnap = false;
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Control' || e.key === 'Meta') { modNoSnap = true; requestDraw(); }
+});
+window.addEventListener('keyup', (e) => {
+  if (e.key === 'Control' || e.key === 'Meta') { modNoSnap = false; requestDraw(); }
+});
+window.addEventListener('blur', () => { modNoSnap = false; });
+
 /* ================= viewport ================= */
 
 function w2s(p) { return { x: p.x * view.scale + view.tx, y: p.y * view.scale + view.ty }; }
@@ -592,6 +602,10 @@ function screenDistToLinear(sp, o) {
 
 /* Returns {kind, label, world, make()} — make() returns a point id. */
 function findSnap(screenPt) {
+  if (modNoSnap) {
+    const wp0 = s2w(screenPt);
+    return { kind: 'free', label: '', world: wp0, make: () => makeFreePoint(wp0) };
+  }
   const tol = TOL() + 2;
   const wp = s2w(screenPt);
 
@@ -728,6 +742,7 @@ function nameOf(o) {
 /* ---- direction snapping while drawing: 0/45/90/135° and ⊥/∥ to visible lines ---- */
 
 function directionSnap(fromPt, wp) {
+  if (modNoSnap) return null;
   const v = V.sub(wp, fromPt);
   const len = V.len(v);
   if (len < 24) return null;
@@ -741,6 +756,7 @@ function directionSnap(fromPt, wp) {
   };
   for (const o of engine.objects.values()) {
     if (!o.valid || o.hidden) continue;
+    if (snapExclude && snapExclude.has(o.id)) continue;
     if (o.type === 'segment' || o.type === 'line' || o.type === 'ray') {
       const l = engine.asLine(o);
       if (!l) continue;
@@ -749,8 +765,12 @@ function directionSnap(fromPt, wp) {
       consider(la, '∥ to ' + nameOf(o), o.id, 'para');
     }
   }
-  consider(0, '0°'); consider(Math.PI / 4, '45°');
-  consider(Math.PI / 2, '90°'); consider(3 * Math.PI / 4, '45°');
+  // absolute angles every 15° (labels in math orientation, y up)
+  for (let k = 0; k < 12; k++) {
+    const a = (k * Math.PI) / 12;
+    const mathDeg = (180 - k * 15) % 180;
+    consider(a, mathDeg + '°');
+  }
   if (!best) return null;
   const dir = { x: Math.cos(best.a), y: Math.sin(best.a) };
   const t = V.dot(v, dir);
@@ -788,6 +808,7 @@ function resolveSnap(sp) {
 
 /* rim within 8px of a half-unit radius → pull it onto that exact radius */
 function radiusSnap(center, wp) {
+  if (modNoSnap) return null;
   const v = V.sub(wp, center);
   const r = V.len(v);
   if (r < 12) return null;
@@ -1443,9 +1464,15 @@ function renderContextbar() {
   closeUnlinkMenu();
   if (!objs.length) { contextbar.hidden = true; return; }
 
-  // three visual sections: info | construction actions | manage
-  const infoEl = document.createElement('div');
-  infoEl.className = 'cb-sec cb-info';
+  // two rows: a header naming the selection (+ measurements),
+  // then one row of actions with manage-buttons set apart on the right
+  const headEl = document.createElement('div');
+  headEl.className = 'cb-head';
+  const titleEl = document.createElement('b');
+  titleEl.className = 'cb-title';
+  titleEl.textContent = selectionTitle(objs);
+  headEl.appendChild(titleEl);
+  const infoEl = headEl; // measurements/notes join the header
   const actEl = document.createElement('div');
   actEl.className = 'cb-sec cb-actions';
   const sysEl = document.createElement('div');
@@ -1556,7 +1583,12 @@ function renderContextbar() {
         commit();
       }]);
     }
-    // a point riding a circle or graph gets its tangent line
+    // any point on a line gets "line at N°" from that line;
+    // a point riding a circle or graph gets its tangent + "line at N°"
+    // measured from the tangent (the curve's derivative direction)
+    if (hosts.length) {
+      actions.push(['anglewidget', { p, host: hosts[0] }]);
+    }
     if (p.kind === 'onPath') {
       const host = engine.get(p.parents[0]);
       if (host && (host.type === 'circle' || host.type === 'function')) {
@@ -1566,6 +1598,7 @@ function renderContextbar() {
           updateHint('Tangent at ' + (p.label || 'the point') +
             ' — select it and another line for “Angle between”');
         }]);
+        actions.push(['anglewidget', { p, host: null }]);
       }
     }
     // a shape's center handle can be promoted to a real lettered point
@@ -1580,11 +1613,15 @@ function renderContextbar() {
     if (!engine.isDraggable(p)) addInfo(describeKind(p));
   }
   if (objs.length === 1) {
-    addInfo('click another object to add it → more actions');
+    const tip = document.createElement('span');
+    tip.className = 'cb-tip';
+    tip.textContent = 'select more objects for more actions';
+    headEl.appendChild(tip);
   }
 
   for (const [name, fn] of actions) {
     if (name === 'divider') { addDivideStepper(segs[0], actEl); continue; }
+    if (name === 'anglewidget') { addAngleWidget(fn.p, fn.host, actEl); continue; }
     const b = document.createElement('button');
     b.textContent = name;
     b.addEventListener('click', () => { fn(); renderContextbar(); requestDraw(); });
@@ -1613,20 +1650,18 @@ function renderContextbar() {
     sysEl.appendChild(ub);
   }
 
-  const hideB = document.createElement('button');
-  hideB.textContent = 'Hide';
-  hideB.addEventListener('click', hideSelection);
-  sysEl.appendChild(hideB);
-
   const delB = document.createElement('button');
   delB.textContent = 'Delete';
   delB.className = 'danger';
   delB.addEventListener('click', deleteSelection);
   sysEl.appendChild(delB);
 
-  if (infoEl.children.length) contextbar.appendChild(infoEl);
-  if (actEl.children.length) contextbar.appendChild(actEl);
-  contextbar.appendChild(sysEl);
+  contextbar.appendChild(headEl);
+  const bodyEl = document.createElement('div');
+  bodyEl.className = 'cb-body';
+  if (actEl.children.length) bodyEl.appendChild(actEl);
+  bodyEl.appendChild(sysEl);
+  contextbar.appendChild(bodyEl);
   contextbar.hidden = false;
 
   function addInfo(text) {
@@ -1635,6 +1670,30 @@ function renderContextbar() {
     s.textContent = text;
     infoEl.appendChild(s);
   }
+}
+
+/* short human name for what's selected, e.g. "Segment BC" or "3 points · A, B, C" */
+function selectionTitle(objs) {
+  if (objs.length === 1) {
+    const o = objs[0];
+    if (o.type === 'function') return 'Graph  f(x) = ' + (o.params.expr || '');
+    if (o.type === 'point' && o.params && o.params.role === 'center') return 'Shape center';
+    const t = o.type.charAt(0).toUpperCase() + o.type.slice(1);
+    const n = nameOf(o);
+    return n && n !== o.type ? t + ' ' + n : t;
+  }
+  const counts = {};
+  for (const o of objs) {
+    const t = o.type === 'function' ? 'graph' : o.type;
+    counts[t] = (counts[t] || 0) + 1;
+  }
+  let s = Object.entries(counts)
+    .map(([t, n]) => n + ' ' + t + (n > 1 ? 's' : '')).join(' + ');
+  const pts = objs.filter((o) => o.type === 'point');
+  if (pts.length === objs.length && pts.length <= 4 && pts.every((p) => p.label)) {
+    s += ' · ' + pts.map((p) => p.label).join(', ');
+  }
+  return s;
 }
 
 /* ---- unlink chooser: name every link, break them one by one or all ---- */
@@ -1655,6 +1714,7 @@ function describeLink(o) {
     case 'parallelThrough': return `${nameOf(o)} is ∥ to ${nm(P[1])} through ${nm(P[0])}`;
     case 'angleBisector': return `${nameOf(o)} bisects the angle at ${nm(P[1])}`;
     case 'tangentAt': return `${nameOf(o)} is the tangent at ${nm(P[0])}`;
+    case 'angledAt': return `${nameOf(o)} holds ${o.params.deg}° to ${P[1] ? nm(P[1]) : 'the curve'} at ${nm(P[0])}`;
     case 'circum3': return `${nameOf(o)} passes through ${P.map(nm).join(', ')}`;
     case 'centerPoint2': return `${nameOf(o)} is centered at ${nm(P[0])} through ${nm(P[1])}`;
     case 'centerRadius': return `${nameOf(o)} is centered at ${nm(P[0])}`;
@@ -1739,6 +1799,52 @@ function openUnlinkMenu(links) {
   });
   menu.appendChild(all);
   document.getElementById('stage').appendChild(menu);
+}
+
+/* "line at N°" widget: angle input + go, from a host line or the curve's tangent */
+let lastAngleDeg = 45;
+
+function addAngleWidget(p, host, container) {
+  const wrap = document.createElement('div');
+  wrap.className = 'stepper';
+  const lbl = document.createElement('span');
+  lbl.className = 'aw-lbl';
+  lbl.textContent = '∠';
+  const inp = document.createElement('input');
+  inp.className = 'aw-inp';
+  inp.value = lastAngleDeg;
+  inp.inputMode = 'decimal';
+  inp.setAttribute('aria-label', 'Angle in degrees');
+  inp.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') go.click();
+    e.stopPropagation();
+  });
+  const go = document.createElement('button');
+  go.textContent = host ? '° line from ' + nameOf(host) : '° line to curve';
+  go.title = host
+    ? 'New line through ' + (p.label || 'this point') + ' at this angle to ' + nameOf(host)
+    : 'New line at this angle to the curve’s tangent here';
+  go.addEventListener('click', () => {
+    const deg = parseFloat(inp.value.replace('−', '-'));
+    if (!Number.isFinite(deg)) { inp.style.borderColor = '#ef4444'; return; }
+    lastAngleDeg = deg;
+    const line = engine.add({
+      type: 'line', kind: 'angledAt',
+      parents: host ? [p.id, host.id] : [p.id],
+      params: { deg },
+    });
+    // show the angle it makes, live, when there's a real host line
+    if (host) {
+      engine.add({ type: 'angle', kind: 'twoLines', parents: [host.id, line.id], params: {} });
+    }
+    commit();
+    updateHint('Line at ' + deg + '° through ' + (p.label || 'the point') +
+      ' — it keeps that angle while things move');
+    renderContextbar();
+    requestDraw();
+  });
+  wrap.append(lbl, inp, go);
+  container.appendChild(wrap);
 }
 
 function addDivideStepper(seg, container) {
@@ -1889,6 +1995,7 @@ canvas.addEventListener('pointermove', (e) => {
 
   const sp = { x: e.clientX, y: e.clientY };
   cursorWorld = s2w(sp);
+  modNoSnap = e.ctrlKey || e.metaKey;
 
   if (pdown && pdown.id === e.pointerId) {
     if (!pdown.moved && V.dist(sp, pdown.screen) > 4) pdown.moved = true;
@@ -1956,10 +2063,29 @@ canvas.addEventListener('pointermove', (e) => {
           // full snapping while dragging: points, midpoints, intersections,
           // curves, grid — same named previews as when placing
           const snap = noSnap ? { kind: 'free' } : findSnap(sp);
-          const use = snap.kind !== 'free' ? snap.world : wp;
+          let use = snap.kind !== 'free' ? snap.world : wp;
+          let tag = snap.kind !== 'free' ? { kind: snap.kind, label: snap.label, world: snap.world } : null;
+          // endpoint of a line? snap the LINE's direction (0/15/…/90°, ⊥/∥)
+          if (!noSnap && (snap.kind === 'free' || snap.kind === 'grid')) {
+            let bestD = Infinity, bestDS = null;
+            for (const L of engine.objects.values()) {
+              if (L.kind !== 'twoPoint' || !L.parents.includes(pdown.obj.id)) continue;
+              const otherId = L.parents.find((pid) => pid !== pdown.obj.id);
+              const other = engine.get(otherId);
+              if (!other || !other.valid) continue;
+              const ds = directionSnap(other, wp);
+              if (ds) {
+                const d = V.dist(w2s(ds.world), sp);
+                if (d < bestD) { bestD = d; bestDS = ds; }
+              }
+            }
+            if (bestDS) {
+              use = bestDS.world;
+              tag = { kind: 'direction', label: bestDS.label, world: bestDS.world };
+            }
+          }
           engine.moveFree(pdown.obj.id, use.x, use.y);
-          snapPreview = snap.kind !== 'free'
-            ? { kind: snap.kind, label: snap.label, world: snap.world } : null;
+          snapPreview = tag;
         } else {
           engine.moveFree(pdown.obj.id, wp.x, wp.y);
           snapPreview = null;
@@ -2459,7 +2585,6 @@ window.addEventListener('keydown', (e) => {
   else if (e.key === '5' || e.key === 's') setTool('polygon');
   else if (e.key === '6' || e.key === 'g') toggleGraphInput();
   else if (e.key === 'u' && selection.length) unlinkSelection();
-  else if (e.key === 'h' && selection.length) hideSelection();
   else if (e.key === '+' || e.key === '=') zoomBy(1.2);
   else if (e.key === '-' || e.key === '_') zoomBy(1 / 1.2);
   else if (e.key === '0') { view.scale = 1; view.tx = canvas.clientWidth / 2; view.ty = canvas.clientHeight / 2; requestDraw(); }

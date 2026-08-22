@@ -232,20 +232,30 @@ body {
 
 #contextbar {
   position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 0; flex-wrap: wrap; justify-content: center;
+  display: flex; flex-direction: column; gap: 0;
   background: var(--panel); border-radius: var(--radius);
   border: 1px solid var(--line);
   box-shadow: 0 8px 30px rgba(20, 20, 40, .14);
-  max-width: 94vw; padding: 4px;
+  max-width: 94vw; padding: 0;
+  overflow: hidden;
+}
+#contextbar .cb-head {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  padding: 8px 14px 7px; background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  font-size: 12.5px;
+}
+#contextbar .cb-title { font-size: 13px; color: var(--ink); white-space: nowrap; }
+#contextbar .cb-note { color: var(--derived); font-weight: 600; white-space: nowrap; }
+#contextbar .cb-tip { color: var(--muted); margin-left: auto; white-space: nowrap; }
+#contextbar .cb-body {
+  display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+  padding: 5px 8px; justify-content: center;
 }
 #contextbar .cb-sec {
-  display: flex; align-items: center; gap: 3px; flex-wrap: wrap;
-  padding: 2px 6px; justify-content: center;
+  display: flex; align-items: center; gap: 3px; flex-wrap: wrap; justify-content: center;
 }
-#contextbar .cb-sec + .cb-sec { border-left: 1px solid var(--line); }
-#contextbar .cb-note {
-  color: var(--muted); font-size: 12.5px; white-space: nowrap; padding: 0 4px;
-}
+#contextbar .cb-sys { margin-left: 10px; padding-left: 10px; border-left: 1px solid var(--line); }
 #contextbar button {
   border: none; background: transparent; color: var(--accent);
   font: inherit; font-size: 13px; font-weight: 600;
@@ -259,6 +269,13 @@ body {
 #contextbar button.danger:hover { background: #fee2e2; }
 #contextbar .stepper { display: flex; align-items: center; gap: 2px; }
 #contextbar .stepper span { min-width: 3ch; text-align: center; font-weight: 700; }
+#contextbar .aw-lbl { color: var(--muted); min-width: auto !important; }
+#contextbar .aw-inp {
+  width: 5ch; border: 1.5px solid var(--line); outline: none;
+  font: inherit; font-size: 13px; font-weight: 600; text-align: center;
+  background: var(--bg); border-radius: 7px; padding: 4px 2px;
+}
+#contextbar .aw-inp:focus { border-color: var(--accent); }
 
 /* unlink chooser popover */
 #unlinkMenu {
