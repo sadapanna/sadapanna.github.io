@@ -2225,8 +2225,13 @@ canvas.addEventListener('pointermove', (e) => {
         }
         const wp = s2w(sp);
         const spinCenter = polygonCenterOf(pdown.obj);
-        // hold Ctrl/Cmd for completely free movement — no snapping at all
-        const noSnap = e.ctrlKey || e.metaKey;
+        // hold Ctrl/Cmd for completely free movement — no snapping at all.
+        // Snapping also stays OFF while the pointer is moving quickly, so a
+        // drag is buttery smooth; slow down near a target and the magnet
+        // engages. (Without this, every grid crossing tugs at the shape.)
+        const speed = pdown.lastSp ? V.dist(sp, pdown.lastSp) : 0;
+        pdown.lastSp = sp;
+        const noSnap = e.ctrlKey || e.metaKey || speed > 6;
 
         if (pdown.group) {
           // group drag: handle can still snap; everyone shifts by the same delta
