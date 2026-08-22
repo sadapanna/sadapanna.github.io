@@ -325,21 +325,13 @@ class Engine {
           vertexIds.add(c.id);
         }
       }
-      const moved = new Set([id]);
       for (const rid of rims) {
         const rim = this.objects.get(rid);
-        if (rim && rim.kind === 'free') { rim.x += dx; rim.y += dy; moved.add(rid); }
+        if (rim && rim.kind === 'free') { rim.x += dx; rim.y += dy; }
       }
-      if (vertexIds.size) {
-        for (const poly of this.objects.values()) {
-          if (poly.type !== 'polygon' || !poly.parents.some((pid) => vertexIds.has(pid))) continue;
-          for (const pid of poly.parents) {
-            const q = this.objects.get(pid);
-            if (q && q.kind === 'free' && !moved.has(pid) && !(q.params && q.params.role === 'center')) {
-              q.x += dx; q.y += dy; moved.add(pid);
-            }
-          }
-        }
+      for (const fid of this.shapeFreeCorners(id)) {
+        const q = this.objects.get(fid);
+        q.x += dx; q.y += dy;
       }
     } else if (o.kind === 'onPath') {
       const path = this.objects.get(o.parents[0]);
@@ -360,6 +352,31 @@ class Engine {
       return;
     }
     this.recomputeAll();
+  }
+
+  // free points that belong to a shape's outline but are no longer regular
+  // corners (unlinked & reshaped) — excludes the center itself and the rim
+  shapeFreeCorners(centerId) {
+    const vertexIds = new Set();
+    const skip = new Set([centerId]);
+    for (const c of this.objects.values()) {
+      if (c.kind === 'regularVertex' && c.parents[0] === centerId) {
+        vertexIds.add(c.id);
+        skip.add(c.parents[1]);
+      }
+    }
+    const out = new Set();
+    if (!vertexIds.size) return out;
+    for (const poly of this.objects.values()) {
+      if (poly.type !== 'polygon' || !poly.parents.some((pid) => vertexIds.has(pid))) continue;
+      for (const pid of poly.parents) {
+        const q = this.objects.get(pid);
+        if (q && q.kind === 'free' && !skip.has(pid) && !(q.params && q.params.role === 'center')) {
+          out.add(pid);
+        }
+      }
+    }
+    return out;
   }
 
   isDraggable(o) {

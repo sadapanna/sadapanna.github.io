@@ -1672,15 +1672,12 @@ function renderContextbar() {
       }) && !prev.parents.some((pid) => descendantsOf(p.id).has(pid));
       if (parentsOk) {
         const ghost = { ...p, kind: prev.kind, parents: prev.parents, params: prev.params };
-        // honest labeling: when restoring the link would MOVE the point
-        // (fixed spots like a regular corner or midpoint), say so up front —
-        // the reshaped figure needs no re-linking to stay together
+        // only offer Re-link where it does something undo can't: re-attaching
+        // in place (gliders, intersections). Fixed spots (regular corner,
+        // midpoint) would teleport the point — going back is what Undo is for.
         const willMove = ['midpoint', 'segMidpoint', 'segNsection', 'centerPoint', 'regularVertex']
           .includes(prev.kind);
-        const lbl = willMove
-          ? 'Snap ' + (p.label || 'it') + ' back (' + describeLink(ghost) + ')'
-          : 'Re-link: ' + describeLink(ghost);
-        actions.push([lbl, () => {
+        if (!willMove) actions.push(['Re-link: ' + describeLink(ghost), () => {
           const wasAt = { x: p.x, y: p.y };
           p.kind = prev.kind;
           p.parents = [...prev.parents];
@@ -2284,6 +2281,19 @@ canvas.addEventListener('pointermove', (e) => {
             labels.push(Math.round(((360 - (ang * 180) / Math.PI) % 360 + 360) % 360) + '°');
           }
           const tx = spinCenter.x + Math.cos(ang) * r, ty = spinCenter.y + Math.sin(ang) * r;
+          // reshaped (unlinked) corners spin and scale along with the shape,
+          // keeping the deformation intact relative to the whole figure
+          const oldRel = V.sub(pdown.obj, spinCenter);
+          const oldR = V.len(oldRel), oldAng = Math.atan2(oldRel.y, oldRel.x);
+          const dAng = ang - oldAng;
+          const k = oldR > 1e-9 ? r / oldR : 1;
+          const cosD = Math.cos(dAng), sinD = Math.sin(dAng);
+          for (const fid of engine.shapeFreeCorners(spinCenter.id)) {
+            const q = engine.get(fid);
+            const rel = V.sub(q, spinCenter);
+            q.x = spinCenter.x + (rel.x * cosD - rel.y * sinD) * k;
+            q.y = spinCenter.y + (rel.x * sinD + rel.y * cosD) * k;
+          }
           engine.moveFree(pdown.obj.id, tx, ty);
           snapPreview = labels.length
             ? { kind: 'spin', label: labels.join(' · '), world: { x: tx, y: ty } } : null;
