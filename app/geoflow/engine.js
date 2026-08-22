@@ -209,7 +209,10 @@ class Engine {
     obj.id = obj.id || this.genId();
     obj.valid = true;
     obj.hidden = obj.hidden || false;
-    if (obj.type === 'point' && !obj.label) obj.label = this.nextPointLabel();
+    // center handles are quiet helpers, not lettered construction points
+    if (obj.type === 'point' && !obj.label && !(obj.params && obj.params.role === 'center')) {
+      obj.label = this.nextPointLabel();
+    }
     this.objects.set(obj.id, obj);
     this.rebuildOrder();
     this.recomputeAll();
@@ -612,6 +615,62 @@ class Engine {
         o.a1 = V.angle(da); o.a2 = V.angle(db);
         let val = Math.acos(Math.max(-1, Math.min(1, V.dot(da, db))));
         o.value = val;
+        break;
+      }
+
+      case 'angle:twoLines': {
+        // acute angle between two linear objects, marked at their crossing
+        // (or at a shared endpoint if the two share a defining point)
+        const [la, lb] = parents;
+        const A = this.asLine(la), B = this.asLine(lb);
+        if (!A || !B) { o.valid = false; break; }
+        let v = null, da = A.d, db = B.d;
+        const shared = (la.parents || []).find((p) => (lb.parents || []).includes(p));
+        if (shared) {
+          const sp = this.objects.get(shared);
+          if (sp && sp.valid && sp.type === 'point') {
+            v = { x: sp.x, y: sp.y };
+            // aim each direction away from the shared vertex
+            const otherOf = (lin) => {
+              const oid = lin.parents.find((p) => p !== shared);
+              const op = this.objects.get(oid);
+              return op && op.valid ? V.norm(V.sub(op, v)) : null;
+            };
+            da = otherOf(la) || da;
+            db = otherOf(lb) || db;
+          }
+        }
+        if (!v) {
+          v = lineLineIntersect(A, B);
+          if (!v) { o.valid = false; break; }
+          if (V.dot(da, db) < 0) db = V.scale(db, -1); // acute sector
+        }
+        o.x = v.x; o.y = v.y;
+        o.a1 = V.angle(da); o.a2 = V.angle(db);
+        o.value = Math.acos(Math.max(-1, Math.min(1, V.dot(da, db))));
+        break;
+      }
+
+      case 'line:tangentAt': {
+        // tangent to the host curve at a glider point
+        const p = parents[0];
+        if (p.kind !== 'onPath') { o.valid = false; break; }
+        const host = this.objects.get(p.parents[0]);
+        if (!host || !host.valid) { o.valid = false; break; }
+        let d = null;
+        if (host.type === 'circle') {
+          d = V.norm(V.perp(V.sub(p, { x: host.cx, y: host.cy })));
+        } else if (host.type === 'function' && host._fn) {
+          const h = 0.5;
+          const y1 = graphWorldY(host._fn, p.x - h), y2 = graphWorldY(host._fn, p.x + h);
+          if (Number.isFinite(y1) && Number.isFinite(y2)) {
+            d = V.norm({ x: 2 * h, y: y2 - y1 });
+          }
+        } else {
+          d = this.asLine(host) ? this.asLine(host).d : null;
+        }
+        if (!d) { o.valid = false; break; }
+        this.setLine(o, { x: p.x, y: p.y }, d, 'line');
         break;
       }
 

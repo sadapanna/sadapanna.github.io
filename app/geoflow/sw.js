@@ -1,5 +1,5 @@
 /* Cache-first service worker: after first load the app works fully offline. */
-const CACHE = 'geoflow-v8';
+const CACHE = 'geoflow-v9';
 const ASSETS = ['./', './index.html', './styles.css', './engine.js', './storage.js', './app.js', './manifest.json',
   './assets/icon.svg', './assets/icon-192.png', './assets/icon-512.png'];
 

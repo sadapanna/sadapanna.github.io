@@ -55,14 +55,14 @@
 
     <!-- top bar: file name + undo/redo + menu -->
     <header id="topbar">
-      <button id="btnFiles" class="chip" title="My files">☰</button>
+      <button id="btnFiles" class="chip" title="My files"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.5V6a1.5 1.5 0 0 1 1.5-1.5h4l2 2h7.5A1.5 1.5 0 0 1 20 8v10a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 18z"/></svg></button>
       <input id="docName" value="Untitled" spellcheck="false" aria-label="File name">
       <span id="saveState" aria-live="polite"></span>
       <span class="spacer"></span>
-      <button id="btnMeasure" class="chip" title="Show sizes (lengths, radii)">📏</button>
-      <button id="btnHelp" class="chip" title="Help">?</button>
-      <button id="btnUndo" class="chip" title="Undo (Ctrl+Z)">↶</button>
-      <button id="btnRedo" class="chip" title="Redo (Ctrl+Y)">↷</button>
+      <button id="btnMeasure" class="chip" title="Show sizes (lengths, radii)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="9" width="19" height="6.5" rx="1.5" transform="rotate(-20 12 12)"/><path d="M8.2 12.6l.7 1.9M12 11.2l.7 1.9M15.8 9.8l.7 1.9"/></svg></button>
+      <button id="btnHelp" class="chip" title="Help"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.6a2.5 2.5 0 1 1 3.4 3c-.8.5-1 .9-1 1.9"/><circle cx="12" cy="17" r=".4" fill="currentColor"/></svg></button>
+      <button id="btnUndo" class="chip" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6L4 10l4 4"/><path d="M4 10h10a5 5 0 0 1 0 10h-3"/></svg></button>
+      <button id="btnRedo" class="chip" title="Redo (Ctrl+Y)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 6l4 4-4 4"/><path d="M20 10H10a5 5 0 0 0 0 10h3"/></svg></button>
     </header>
 
     <!-- the whole tool UI: one draggable strip, few big buttons -->
@@ -85,8 +85,10 @@
           <li><b>Angle snapping</b> — while drawing a line it clicks to 0°/45°/90° and to ⊥ / ∥ of lines on screen; the tag names the line (e.g. "⊥ to TU") and that line glows. Finishing on such a snap creates a <b>linked</b> ⊥/∥ — it stays true when dragged. Select it → <b>🔗 Unlink</b> to break the link (works on any derived object). Dragged points snap to grid crossings; circle radii snap to half-units.</li>
           <li><b>Graph</b> — type f(x) like <code>x^2/4</code> or <code>sin(x)</code>. Points snap onto the curve; intersect it with lines or other graphs.</li>
           <li><b>📏</b> — toggle live sizes (lengths, radii) in grid units.</li>
-          <li><b>Shape tool presets</b> — pick △ ◻ ⬠ ⬡ (or type n) in the row under the toolbar, tap a center, tap a corner. Drag <i>any</i> corner to rotate/resize it; drag the center to move the whole shape.</li>
-          <li><b>Dragging snaps too</b> — a moving point grabs onto other points, midpoints, intersections, curves and the grid, with the same named tags as when placing.</li>
+          <li><b>Shape tool presets</b> — pick △ ◻ ⬠ ⬡ (or type n) in the row under the toolbar, then tap one corner and the opposite corner, like drawing a box: the shape fits inside. Drag <i>any</i> corner to rotate/resize (angles click to 15° steps); drag the ✛ center handle to move the whole shape — and turn it into a real point from its menu if you need it.</li>
+          <li><b>Dragging snaps too</b> — a moving point grabs onto other points, midpoints, intersections, curves and the grid, with the same named tags as when placing. Select several points and drag any of them to move them all together. Hold <b>Ctrl/Cmd</b> while dragging for completely free movement, no snapping.</li>
+          <li><b>Angles &amp; tangents</b> — select two lines → <i>Angle between</i>. Put a point on a circle or graph, select it → <i>Tangent here</i>; the tangent works with "Angle between" like any other line.</li>
+          <li><b>Unlink</b> — selecting anything built from something shows <i>Unlink</i>; it names every link in plain words ("D is the midpoint of a") and you choose which to break, or break all.</li>
           <li><b>Keyboard</b> — tools: <b>M/V</b> move, <b>P</b> point, <b>L</b> line, <b>C</b> circle, <b>S</b> shape, <b>G</b> graph (or <b>1–6</b>). <b>Arrows</b> nudge the selection (Shift = bigger steps) · <b>U</b> unlink · <b>H</b> hide · <b>Del</b> delete · <b>Esc</b> cancels a step · <b>Ctrl+Z / Ctrl+Y</b> undo/redo · <b>+ / − / 0</b> zoom.</li>
           <li>Work saves automatically — ☰ opens your files. Everything runs offline.</li>
         </ul>
@@ -98,9 +100,9 @@
 
     <!-- zoom controls -->
     <div id="zoomCtrl" aria-label="Zoom">
-      <button id="zoomIn" class="chip" title="Zoom in (+)">＋</button>
-      <button id="zoomReset" class="chip" title="Reset view (0)">⌂</button>
-      <button id="zoomOut" class="chip" title="Zoom out (−)">−</button>
+      <button id="zoomIn" class="chip" title="Zoom in (+)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></button>
+      <button id="zoomReset" class="chip" title="Reset view (0)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="2.5"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></button>
+      <button id="zoomOut" class="chip" title="Zoom out (−)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 12h12"/></svg></button>
     </div>
 
     <!-- context actions for a selected object (appears near selection) -->
@@ -110,7 +112,7 @@
     <div id="filesPanel" hidden>
       <div class="panel-head">
         <strong>My constructions</strong>
-        <button id="btnCloseFiles" class="chip" title="Collapse">❮</button>
+        <button id="btnCloseFiles" class="chip" title="Collapse"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg></button>
       </div>
       <div id="filesList"></div>
       <div class="panel-foot">

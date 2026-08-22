@@ -14,6 +14,7 @@ const view = { scale: 1, tx: 0, ty: 0 };   // world -> screen: s = w*scale + t
 let tool = 'move';                          // move | point | line | circle | polygon
 let lineMode = 'segment';                   // segment | ray | line
 let polyMode = 'free';                      // 'free' (point-by-point) | 3..60 (regular n-gon)
+let shapeBoxStart = null;                   // first corner of a preset-shape box
 let pending = [];                           // point ids collected by current tool op
 let opCommits = 0;                          // undo steps created by the op in progress
 
@@ -378,6 +379,22 @@ function drawPoint(o, parentIds) {
   const selected = selection.includes(o.id);
   const hovered = o.id === hoverId;
 
+  // center handle: a quiet little cross, not a lettered point
+  if (o.params && o.params.role === 'center') {
+    ctx.strokeStyle = selected || hovered ? C.sel : C.preview;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(s.x - 5, s.y); ctx.lineTo(s.x + 5, s.y);
+    ctx.moveTo(s.x, s.y - 5); ctx.lineTo(s.x, s.y + 5);
+    ctx.stroke();
+    if (selected || hovered) {
+      ctx.strokeStyle = selected ? C.sel : C.hover;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(s.x, s.y, 9, 0, Math.PI * 2); ctx.stroke();
+    }
+    return;
+  }
+
   if (selected || hovered || parentIds.has(o.id)) {
     ctx.fillStyle = selected ? 'rgba(79,70,229,.18)' :
       hovered ? 'rgba(245,158,11,.22)' : 'rgba(245,158,11,.18)';
@@ -398,8 +415,33 @@ function drawPoint(o, parentIds) {
 }
 
 function drawPending() {
-  if (!pending.length || !cursorWorld) return;
+  if (!cursorWorld) return;
   const cur = snapPreview ? snapPreview.world : cursorWorld;
+
+  // preset-shape box preview: dashed box + the n-gon inscribed in it
+  if (shapeBoxStart && tool === 'polygon' && typeof polyMode === 'number') {
+    const a = w2s(shapeBoxStart), b = w2s(cur);
+    ctx.strokeStyle = C.preview;
+    ctx.lineWidth = 1.4;
+    ctx.setLineDash([5, 5]);
+    ctx.strokeRect(Math.min(a.x, b.x), Math.min(a.y, b.y),
+      Math.abs(b.x - a.x), Math.abs(b.y - a.y));
+    const r = Math.min(Math.abs(cur.x - shapeBoxStart.x), Math.abs(cur.y - shapeBoxStart.y)) / 2;
+    if (r > 2) {
+      const c = V.mid(shapeBoxStart, cur);
+      ctx.beginPath();
+      for (let i = 0; i <= polyMode; i++) {
+        const ang = -Math.PI / 2 + (i % polyMode) * 2 * Math.PI / polyMode;
+        const s = w2s({ x: c.x + Math.cos(ang) * r, y: c.y + Math.sin(ang) * r });
+        if (i === 0) ctx.moveTo(s.x, s.y); else ctx.lineTo(s.x, s.y);
+      }
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    return;
+  }
+
+  if (!pending.length) return;
   ctx.strokeStyle = C.preview;
   ctx.lineWidth = 1.6;
   ctx.setLineDash([6, 5]);
@@ -418,18 +460,6 @@ function drawPending() {
   } else if (tool === 'circle' && pts.length === 1) {
     const c = w2s(pts[0]);
     ctx.arc(c.x, c.y, V.dist(pts[0], cur) * view.scale, 0, Math.PI * 2);
-  } else if (tool === 'polygon' && typeof polyMode === 'number' && pts.length === 1) {
-    // preset preview: dashed regular n-gon around the chosen center
-    const c = pts[0];
-    const n = polyMode;
-    for (let i = 0; i <= n; i++) {
-      const a = (i % n) * 2 * Math.PI / n;
-      const cos = Math.cos(a), sin = Math.sin(a);
-      const vx = c.x + (cur.x - c.x) * cos - (cur.y - c.y) * sin;
-      const vy = c.y + (cur.x - c.x) * sin + (cur.y - c.y) * cos;
-      const s = w2s({ x: vx, y: vy });
-      if (i === 0) ctx.moveTo(s.x, s.y); else ctx.lineTo(s.x, s.y);
-    }
   } else if (tool === 'polygon') {
     const s0 = w2s(pts[0]);
     ctx.moveTo(s0.x, s0.y);
@@ -486,6 +516,19 @@ function roundRect(x, y, w, h, r) {
 /* objects the current drag must not snap to (the dragged point + everything
    built from it, plus rim points a center-drag carries along) */
 let snapExclude = null;
+
+/* the center a point spins around, if it's a vertex of a regular polygon
+   (the center point itself and unrelated points return null) */
+function polygonCenterOf(pt) {
+  if (!pt || pt.type !== 'point') return null;
+  if (pt.kind === 'regularVertex') return engine.get(pt.parents[0]);
+  if (pt.kind === 'free') {
+    for (const o of engine.objects.values()) {
+      if (o.kind === 'regularVertex' && o.parents[1] === pt.id) return engine.get(o.parents[0]);
+    }
+  }
+  return null;
+}
 
 function descendantsOf(...roots) {
   const s = new Set(roots);
@@ -790,11 +833,11 @@ function findExistingPoint(kind, parents, nearPt, params) {
 /* ================= tools ================= */
 
 const TOOLS = [
-  { id: 'move', name: 'Move', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#1c1c28" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 8-6 2 4 6-3 2-4-6-5 4z"/></svg>' },
-  { id: 'point', name: 'Point', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#1c1c28" stroke-width="1.8"><circle cx="12" cy="12" r="3.4" fill="#1c1c28"/></svg>' },
-  { id: 'line', name: 'Line', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#1c1c28" stroke-width="1.8" stroke-linecap="round"><path d="M4 20L20 4"/><circle cx="5" cy="19" r="2" fill="#1c1c28" stroke="none"/><circle cx="19" cy="5" r="2" fill="#1c1c28" stroke="none"/></svg>' },
-  { id: 'circle', name: 'Circle', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#1c1c28" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="1.6" fill="#1c1c28" stroke="none"/></svg>' },
-  { id: 'polygon', name: 'Shape', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#1c1c28" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l9 7-3.5 10h-11L3 10z"/></svg>' },
+  { id: 'move', name: 'Move', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 8-6 2 4 6-3 2-4-6-5 4z"/></svg>' },
+  { id: 'point', name: 'Point', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.4" fill="currentColor"/></svg>' },
+  { id: 'line', name: 'Line', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20L20 4"/><circle cx="5" cy="19" r="2" fill="currentColor" stroke="none"/><circle cx="19" cy="5" r="2" fill="currentColor" stroke="none"/></svg>' },
+  { id: 'circle', name: 'Circle', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg>' },
+  { id: 'polygon', name: 'Shape', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l9 7-3.5 10h-11L3 10z"/></svg>' },
 ];
 
 const HINTS = {
@@ -822,7 +865,7 @@ function buildToolbar() {
     toolbarEl.appendChild(b);
   }
   const g = document.createElement('button');
-  g.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#1c1c28" stroke-width="1.8" stroke-linecap="round"><path d="M3 17 Q 8 4 12 12 T 21 8"/></svg><span>Graph</span>';
+  g.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 17 Q 8 4 12 12 T 21 8"/></svg><span>Graph</span>';
   g.title = 'Plot a function f(x)';
   g.dataset.tool = 'graph';
   g.addEventListener('click', () => toggleGraphInput());
@@ -1218,9 +1261,9 @@ function updateHint(msg) {
   if (tool === 'line' || tool === 'circle') key = tool + '-' + Math.min(pending.length, 1);
   if (tool === 'polygon') {
     if (typeof polyMode === 'number') {
-      hintEl.textContent = pending.length === 0
-        ? `Tap the center of the ${polyMode}-gon`
-        : 'Tap where a corner should be · Esc to cancel';
+      hintEl.textContent = !shapeBoxStart
+        ? `Tap one corner, then the opposite corner — the ${polyMode}-gon fits inside`
+        : 'Tap the opposite corner · Esc to cancel';
       return;
     }
     key = 'polygon-' + (pending.length === 0 ? '0' : 'n');
@@ -1249,6 +1292,7 @@ function cancelPending(restore) {
   }
   pending = [];
   opCommits = 0;
+  shapeBoxStart = null;
   updateHint();
   requestDraw();
 }
@@ -1291,6 +1335,34 @@ function toolClick(snap) {
     }
   }
 
+  // Shape presets draw like a design tool: corner to opposite corner.
+  // No helper points are created for the corners themselves.
+  if (tool === 'polygon' && typeof polyMode === 'number') {
+    if (!shapeBoxStart) {
+      shapeBoxStart = snap.world;
+    } else {
+      const a = shapeBoxStart, b = snap.world;
+      const r = Math.min(Math.abs(b.x - a.x), Math.abs(b.y - a.y)) / 2;
+      if (r > 4) {
+        const c = V.mid(a, b);
+        const center = engine.add({
+          type: 'point', kind: 'free', parents: [], params: { role: 'center' },
+          x: c.x, y: c.y,
+        });
+        const rim = engine.add({
+          type: 'point', kind: 'free', parents: [], params: {},
+          x: c.x, y: c.y - r,
+        });
+        buildRegularPolygon(center.id, rim.id, polyMode);
+        commit();
+      }
+      shapeBoxStart = null;
+    }
+    updateHint();
+    requestDraw();
+    return;
+  }
+
   if (pending.length === 0) opCommits = 0;
   const before = engine.objects.size;
   const pid = snap.make();
@@ -1315,23 +1387,11 @@ function toolClick(snap) {
       pending = []; opCommits = 0;
     }
   } else if (tool === 'polygon') {
-    if (typeof polyMode === 'number') {
-      // preset: first click = center, second click = a vertex
-      pending.push(pid);
-      if (pending.length === 2) {
-        if (pending[0] !== pending[1]) {
-          buildRegularPolygon(pending[0], pending[1], polyMode);
-          commit();
-        }
-        pending = []; opCommits = 0;
-      }
-    } else {
-      if (pending.length >= 3 && pid === pending[0]) {
-        closePolygon();
-        return;
-      }
-      if (!pending.includes(pid)) pending.push(pid);
+    if (pending.length >= 3 && pid === pending[0]) {
+      closePolygon();
+      return;
     }
+    if (!pending.includes(pid)) pending.push(pid);
   }
   updateHint();
   requestDraw();
@@ -1380,7 +1440,16 @@ function selObjs() { return selection.map((id) => engine.get(id)).filter(Boolean
 function renderContextbar() {
   const objs = selObjs();
   contextbar.innerHTML = '';
+  closeUnlinkMenu();
   if (!objs.length) { contextbar.hidden = true; return; }
+
+  // three visual sections: info | construction actions | manage
+  const infoEl = document.createElement('div');
+  infoEl.className = 'cb-sec cb-info';
+  const actEl = document.createElement('div');
+  actEl.className = 'cb-sec cb-actions';
+  const sysEl = document.createElement('div');
+  sysEl.className = 'cb-sec cb-sys';
 
   const pts = objs.filter((o) => o.type === 'point');
   const segs = objs.filter((o) => o.type === 'segment');
@@ -1446,6 +1515,13 @@ function renderContextbar() {
       commit();
     }]);
   }
+  if (linears.length === 2 && objs.length === 2) {
+    const [la, lb] = linears;
+    actions.push(['Angle between', () => {
+      engine.add({ type: 'angle', kind: 'twoLines', parents: [la.id, lb.id], params: {} });
+      commit();
+    }]);
+  }
   if (curves === 2 && pts.length === 0) {
     const [a, b] = [...linears, ...circles, ...funcs];
     actions.push(['Intersect', () => {
@@ -1480,6 +1556,27 @@ function renderContextbar() {
         commit();
       }]);
     }
+    // a point riding a circle or graph gets its tangent line
+    if (p.kind === 'onPath') {
+      const host = engine.get(p.parents[0]);
+      if (host && (host.type === 'circle' || host.type === 'function')) {
+        actions.push(['Tangent here', () => {
+          engine.add({ type: 'line', kind: 'tangentAt', parents: [p.id], params: {} });
+          commit();
+          updateHint('Tangent at ' + (p.label || 'the point') +
+            ' — select it and another line for “Angle between”');
+        }]);
+      }
+    }
+    // a shape's center handle can be promoted to a real lettered point
+    if (p.params && p.params.role === 'center') {
+      actions.push(['Make it a point', () => {
+        delete p.params.role;
+        p.label = engine.nextPointLabel();
+        commit();
+      }]);
+      addInfo('shape center');
+    }
     if (!engine.isDraggable(p)) addInfo(describeKind(p));
   }
   if (objs.length === 1) {
@@ -1487,58 +1584,164 @@ function renderContextbar() {
   }
 
   for (const [name, fn] of actions) {
-    if (name === 'divider') { addDivideStepper(segs[0]); continue; }
+    if (name === 'divider') { addDivideStepper(segs[0], actEl); continue; }
     const b = document.createElement('button');
     b.textContent = name;
     b.addEventListener('click', () => { fn(); renderContextbar(); requestDraw(); });
-    contextbar.appendChild(b);
+    actEl.appendChild(b);
   }
 
-  // Unlink: break an object's dependence on what it was built from.
-  // A segment unlinks by freeing its constrained endpoints (e.g. the one that
-  // rides a hidden ⊥ guide); other objects freeze in place.
-  const hasDerivedEndpoint = (o) =>
-    o.parents.some((pid) => { const p = engine.get(pid); return p && p.type === 'point' && p.kind !== 'free'; });
-  const canUnlink = objs.some((o) =>
-    (o.type === 'point' && o.kind !== 'free') ||
-    ((o.type === 'line' || o.type === 'ray') && o.kind !== 'frozen' &&
-      (o.kind !== 'twoPoint' || hasDerivedEndpoint(o))) ||
-    (o.type === 'circle' && o.kind !== 'frozen') ||
-    (o.type === 'segment' && o.kind === 'twoPoint' && hasDerivedEndpoint(o)) ||
-    (o.type === 'polygon' && hasDerivedEndpoint(o)));
-  if (canUnlink) {
+  // Unlink: opens a chooser that names each link and unlinks just the
+  // ones you pick (or everything at once)
+  const links = collectLinkItems(objs);
+  if (links.length) {
     const ub = document.createElement('button');
-    ub.textContent = '🔗 Unlink';
-    ub.title = 'Break the link to what this was built from — it keeps its current position';
-    ub.addEventListener('click', unlinkSelection);
-    contextbar.appendChild(ub);
+    ub.textContent = 'Unlink' + (links.length > 1 ? ' (' + links.length + ')' : '');
+    ub.title = links.length === 1 ? links[0].desc
+      : 'Choose which links to break — each keeps its current position';
+    ub.addEventListener('click', () => {
+      if (links.length === 1) {
+        links[0].apply();
+        commit();
+        updateHint('Unlinked: ' + links[0].desc);
+        renderContextbar();
+        requestDraw();
+      } else {
+        openUnlinkMenu(links);
+      }
+    });
+    sysEl.appendChild(ub);
   }
 
-  // universal: hide, delete
   const hideB = document.createElement('button');
   hideB.textContent = 'Hide';
   hideB.addEventListener('click', hideSelection);
-  contextbar.appendChild(hideB);
+  sysEl.appendChild(hideB);
 
   const delB = document.createElement('button');
   delB.textContent = 'Delete';
   delB.className = 'danger';
   delB.addEventListener('click', deleteSelection);
-  contextbar.appendChild(delB);
+  sysEl.appendChild(delB);
 
+  if (infoEl.children.length) contextbar.appendChild(infoEl);
+  if (actEl.children.length) contextbar.appendChild(actEl);
+  contextbar.appendChild(sysEl);
   contextbar.hidden = false;
 
   function addInfo(text) {
-    const s = document.createElement('button');
+    const s = document.createElement('span');
+    s.className = 'cb-note';
     s.textContent = text;
-    s.style.background = 'transparent';
-    s.style.color = 'var(--muted)';
-    s.style.cursor = 'default';
-    contextbar.appendChild(s);
+    infoEl.appendChild(s);
   }
 }
 
-function addDivideStepper(seg) {
+/* ---- unlink chooser: name every link, break them one by one or all ---- */
+
+function describeLink(o) {
+  const nm = (id) => nameOf(engine.get(id));
+  const P = o.parents || [];
+  switch (o.kind) {
+    case 'midpoint': return `${nameOf(o)} is the midpoint of ${nm(P[0])}${nm(P[1])}`;
+    case 'segMidpoint': return `${nameOf(o)} is the midpoint of ${nm(P[0])}`;
+    case 'segNsection': return `${nameOf(o)} is the ${o.params.k}/${o.params.n} point of ${nm(P[0])}`;
+    case 'intersection': return `${nameOf(o)} is the intersection of ${nm(P[0])} and ${nm(P[1])}`;
+    case 'centerPoint': return `${nameOf(o)} is the center of ${nm(P[0])}`;
+    case 'onPath': return `${nameOf(o)} rides on ${nm(P[0])}`;
+    case 'regularVertex': return `${nameOf(o)} is a corner of the regular polygon`;
+    case 'perpBisector': return `${nameOf(o)} is the ⊥ bisector of ${nm(P[0])}${P[1] ? nm(P[1]) : ''}`;
+    case 'perpThrough': return `${nameOf(o)} is ⊥ to ${nm(P[1])} through ${nm(P[0])}`;
+    case 'parallelThrough': return `${nameOf(o)} is ∥ to ${nm(P[1])} through ${nm(P[0])}`;
+    case 'angleBisector': return `${nameOf(o)} bisects the angle at ${nm(P[1])}`;
+    case 'tangentAt': return `${nameOf(o)} is the tangent at ${nm(P[0])}`;
+    case 'circum3': return `${nameOf(o)} passes through ${P.map(nm).join(', ')}`;
+    case 'centerPoint2': return `${nameOf(o)} is centered at ${nm(P[0])} through ${nm(P[1])}`;
+    case 'centerRadius': return `${nameOf(o)} is centered at ${nm(P[0])}`;
+    default: return `${nameOf(o)} is built from ${P.map(nm).join(', ')}`;
+  }
+}
+
+function collectLinkItems(objs) {
+  const items = [];
+  const seen = new Set();
+  const cleanupHidden = (ids) => {
+    for (const hid of ids) {
+      const h = engine.get(hid);
+      if (h && h.hidden && engine.children(hid).length === 0) engine.delete(hid);
+    }
+  };
+  const addItem = (o) => {
+    if (seen.has(o.id)) return;
+    seen.add(o.id);
+    items.push({
+      desc: describeLink(o),
+      apply: () => {
+        const hosts = [...(o.parents || [])];
+        if (engine.detach(o.id)) cleanupHidden(hosts);
+      },
+    });
+  };
+  for (const o of objs) {
+    if (o.type === 'point' && o.kind !== 'free') addItem(o);
+    else if ((o.kind === 'twoPoint' || o.type === 'polygon')) {
+      for (const pid of o.parents || []) {
+        const p = engine.get(pid);
+        if (p && p.type === 'point' && p.kind !== 'free') addItem(p);
+      }
+    } else if (o.type !== 'point' && o.kind !== 'frozen' && (o.parents || []).length &&
+               (o.type === 'line' || o.type === 'ray' || o.type === 'circle')) {
+      addItem(o);
+    }
+  }
+  return items;
+}
+
+function closeUnlinkMenu() {
+  const m = document.getElementById('unlinkMenu');
+  if (m) m.remove();
+}
+
+function openUnlinkMenu(links) {
+  closeUnlinkMenu();
+  const menu = document.createElement('div');
+  menu.id = 'unlinkMenu';
+  const head = document.createElement('div');
+  head.className = 'ul-head';
+  head.textContent = 'Which link should stop holding?';
+  menu.appendChild(head);
+  for (const link of links) {
+    const row = document.createElement('div');
+    row.className = 'ul-row';
+    const t = document.createElement('span');
+    t.textContent = link.desc;
+    const b = document.createElement('button');
+    b.textContent = 'Unlink';
+    b.addEventListener('click', () => {
+      link.apply();
+      commit();
+      updateHint('Unlinked: ' + link.desc);
+      renderContextbar();
+      requestDraw();
+    });
+    row.append(t, b);
+    menu.appendChild(row);
+  }
+  const all = document.createElement('button');
+  all.className = 'ul-all';
+  all.textContent = 'Unlink all (' + links.length + ')';
+  all.addEventListener('click', () => {
+    for (const link of links) link.apply();
+    commit();
+    updateHint('Unlinked everything — it all moves freely now');
+    renderContextbar();
+    requestDraw();
+  });
+  menu.appendChild(all);
+  document.getElementById('stage').appendChild(menu);
+}
+
+function addDivideStepper(seg, container) {
   const wrap = document.createElement('div');
   wrap.className = 'stepper';
   const minus = document.createElement('button'); minus.textContent = '−';
@@ -1555,7 +1758,7 @@ function addDivideStepper(seg) {
     commit(); renderContextbar(); requestDraw();
   });
   wrap.append(minus, label, plus, go);
-  contextbar.appendChild(wrap);
+  (container || contextbar).appendChild(wrap);
 }
 
 function describeKind(o) {
@@ -1569,39 +1772,14 @@ function describeKind(o) {
   }
 }
 
+/* keyboard shortcut U: break every link in the selection at once */
 function unlinkSelection() {
-  let changed = 0;
-  const cleanupHidden = (ids) => {
-    for (const hid of ids) {
-      const h = engine.get(hid);
-      if (h && h.hidden && engine.children(hid).length === 0) engine.delete(hid);
-    }
-  };
-  const freeVertices = (o) => {
-    for (const pid of o.parents) {
-      const p = engine.get(pid);
-      if (p && p.type === 'point' && p.kind !== 'free') {
-        const hosts = [...(p.parents || [])];
-        if (engine.detach(pid)) { changed++; cleanupHidden(hosts); }
-      }
-    }
-  };
-  for (const id of [...selection]) {
-    const o = engine.get(id);
-    if (!o) continue;
-    // segments/lines/polygons unlink by freeing their derived defining points
-    // (so a regular polygon becomes n independent draggable corners)
-    if (o.kind === 'twoPoint' || o.type === 'polygon') {
-      freeVertices(o);
-      continue;
-    }
-    const hosts = [...(o.parents || [])];
-    if (engine.detach(id)) { changed++; cleanupHidden(hosts); }
-  }
-  if (changed) {
-    commit();
-    updateHint('Unlinked — it now moves on its own');
-  }
+  const links = collectLinkItems(selObjs());
+  if (!links.length) return;
+  for (const link of links) link.apply();
+  commit();
+  updateHint(links.length === 1 ? 'Unlinked: ' + links[0].desc
+    : 'Unlinked ' + links.length + ' links — everything moves freely now');
   renderContextbar();
   requestDraw();
 }
@@ -1658,6 +1836,7 @@ const activePointers = new Map();
 
 canvas.addEventListener('pointerdown', (e) => {
   if (document.getElementById('shapeMenu')) { closeShapeMenu(); return; }
+  closeUnlinkMenu();
   canvas.setPointerCapture(e.pointerId);
   activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
@@ -1719,21 +1898,64 @@ canvas.addEventListener('pointermove', (e) => {
         if (pdown.mode === 'maybeDragPoint') {
           pdown.mode = 'dragPoint';
           canvas.classList.add('dragging');
-          // never snap to yourself or anything built from you; a center-drag
-          // also carries its polygon's rim, so exclude that family too
+          pdown.start = { x: pdown.obj.x, y: pdown.obj.y };
+          // dragging one of several selected points moves them all together
+          if (selection.includes(pdown.obj.id)) {
+            const members = selObjs().filter((o) => o.type === 'point' && o.kind === 'free');
+            if (members.length > 1 && members.some((o) => o.id === pdown.obj.id)) {
+              pdown.group = members.map((o) => ({ id: o.id, x0: o.x, y0: o.y }));
+            }
+          }
+          // never snap to yourself or anything built from you; group members
+          // and carried polygon rims count as "you" too
           const roots = [pdown.obj.id];
-          if (pdown.obj.kind === 'free') {
+          if (pdown.group) roots.push(...pdown.group.map((m) => m.id));
+          for (const rid of [...roots]) {
             for (const c of engine.objects.values()) {
-              if (c.kind === 'regularVertex' && c.parents[0] === pdown.obj.id) roots.push(c.parents[1]);
+              if (c.kind === 'regularVertex' && c.parents[0] === rid) roots.push(c.parents[1]);
             }
           }
           snapExclude = descendantsOf(...roots);
         }
         const wp = s2w(sp);
-        if (pdown.obj.kind === 'free') {
+        const spinCenter = polygonCenterOf(pdown.obj);
+        // hold Ctrl/Cmd for completely free movement — no snapping at all
+        const noSnap = e.ctrlKey || e.metaKey;
+
+        if (pdown.group) {
+          // group drag: handle can still snap; everyone shifts by the same delta
+          const snap = noSnap ? { kind: 'free' } : findSnap(sp);
+          const use = snap.kind !== 'free' ? snap.world : wp;
+          const dx = use.x - pdown.start.x, dy = use.y - pdown.start.y;
+          for (const m of pdown.group) engine.moveFree(m.id, m.x0 + dx, m.y0 + dy);
+          snapPreview = snap.kind !== 'free'
+            ? { kind: snap.kind, label: snap.label, world: snap.world } : null;
+        } else if (spinCenter) {
+          // rotating/resizing a regular polygon by a vertex:
+          // snap the spoke to 15° steps and the radius to half grid units
+          const rel = V.sub(wp, spinCenter);
+          let r = V.len(rel), ang = Math.atan2(rel.y, rel.x);
+          const labels = [];
+          const step = Math.PI / 12;
+          const snapped = Math.round(ang / step) * step;
+          if (!noSnap && Math.abs(ang - snapped) < (3.2 * Math.PI) / 180) {
+            ang = snapped;
+            labels.push(Math.round(((360 - (ang * 180) / Math.PI) % 360 + 360) % 360) + '°');
+          }
+          const rUnit = U / 2;
+          const rs = Math.round(r / rUnit) * rUnit;
+          if (!noSnap && rs > 0 && Math.abs(r - rs) * view.scale < 7) {
+            r = rs;
+            labels.push('r=' + (rs / U));
+          }
+          const tx = spinCenter.x + Math.cos(ang) * r, ty = spinCenter.y + Math.sin(ang) * r;
+          engine.moveFree(pdown.obj.id, tx, ty);
+          snapPreview = labels.length
+            ? { kind: 'spin', label: labels.join(' · '), world: { x: tx, y: ty } } : null;
+        } else if (pdown.obj.kind === 'free') {
           // full snapping while dragging: points, midpoints, intersections,
           // curves, grid — same named previews as when placing
-          const snap = findSnap(sp);
+          const snap = noSnap ? { kind: 'free' } : findSnap(sp);
           const use = snap.kind !== 'free' ? snap.world : wp;
           engine.moveFree(pdown.obj.id, use.x, use.y);
           snapPreview = snap.kind !== 'free'
@@ -2219,7 +2441,8 @@ window.addEventListener('keydown', (e) => {
   else if ((mod && e.key.toLowerCase() === 'y') || (mod && e.shiftKey && e.key.toLowerCase() === 'z')) { e.preventDefault(); redo(); }
   else if (e.key === 'Escape') {
     if (document.getElementById('shapeMenu')) closeShapeMenu();
-    else if (pending.length) cancelPending(true);
+    else if (document.getElementById('unlinkMenu')) closeUnlinkMenu();
+    else if (pending.length || shapeBoxStart) cancelPending(true);
     else if (!filesPanel.hidden) closeFiles();
     else { clearSelection(); requestDraw(); }
   } else if ((e.key === 'Delete' || e.key === 'Backspace') && selection.length) {
