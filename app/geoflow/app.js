@@ -1879,11 +1879,31 @@ function collectLinkItems(objs) {
       desc: `${nameOf(o)} goes free and ${nameOf(seg)} splits into two segments at it`,
       apply: () => {
         const [aId, bId] = seg.parents;
+        const fracOf = (pt) =>
+          pt.kind === 'segMidpoint' ? 0.5
+            : pt.kind === 'segNsection' ? pt.params.k / pt.params.n
+              : Math.max(0, Math.min(1, pt.params.t || 0));
+        const h = fracOf(o);
+        // every OTHER point riding this segment must move onto the correct
+        // half, proportionally — otherwise it would keep following the
+        // hidden straight chord instead of the visible (bendable) path
+        const riders = [...engine.objects.values()].filter((q) =>
+          q !== o && q.type === 'point' && q.parents && q.parents[0] === seg.id &&
+          (q.kind === 'segMidpoint' || q.kind === 'segNsection' || q.kind === 'onPath'));
         engine.detach(o.id);
+        let segA = null, segB = null;
         engine.batch(() => {
-          engine.add({ type: 'segment', kind: 'twoPoint', parents: [aId, o.id], params: {} });
-          engine.add({ type: 'segment', kind: 'twoPoint', parents: [o.id, bId], params: {} });
+          segA = engine.add({ type: 'segment', kind: 'twoPoint', parents: [aId, o.id], params: {} });
+          segB = engine.add({ type: 'segment', kind: 'twoPoint', parents: [o.id, bId], params: {} });
         });
+        for (const q of riders) {
+          const f = fracOf(q);
+          if (h > 1e-9 && f <= h) {
+            q.kind = 'onPath'; q.parents = [segA.id]; q.params = { t: f / h };
+          } else if (h < 1 - 1e-9) {
+            q.kind = 'onPath'; q.parents = [segB.id]; q.params = { t: (f - h) / (1 - h) };
+          }
+        }
         if (engine.children(seg.id).length === 0) engine.delete(seg.id);
         else seg.hidden = true;
         engine.rebuildOrder();
