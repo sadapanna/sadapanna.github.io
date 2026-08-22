@@ -1677,23 +1677,16 @@ function renderContextbar() {
           p.kind = prev.kind;
           p.parents = [...prev.parents];
           p.params = { ...prev.params };
-          // re-attach WHERE THE POINT IS NOW, not where it used to be
+          // re-attach where the point is now IF that never moves other points:
+          // gliders rejoin their curve at the nearest spot, intersections keep
+          // the nearest branch. Everything else (midpoints, polygon corners)
+          // returns to its own defined slot — only THIS point moves, the rest
+          // of the construction is never touched.
           if (prev.kind === 'onPath') {
             const host = engine.get(prev.parents[0]);
             const proj = engine.projectOntoPath(wasAt, host);
             if (proj) p.params.t = proj.t;
-          } else if (prev.kind === 'regularVertex') {
-            // spin the polygon so this corner stays put
-            const c = engine.get(prev.parents[0]);
-            const rim = engine.get(prev.parents[1]);
-            if (c && rim && rim.kind === 'free') {
-              const a = -(prev.params.i * 2 * Math.PI) / prev.params.n;
-              const dx = wasAt.x - c.x, dy = wasAt.y - c.y;
-              rim.x = c.x + dx * Math.cos(a) - dy * Math.sin(a);
-              rim.y = c.y + dx * Math.sin(a) + dy * Math.cos(a);
-            }
           }
-          // intersections keep wasAt as the seed → nearest branch wins
           engine.rebuildOrder();
           engine.recomputeAll();
           commit();
