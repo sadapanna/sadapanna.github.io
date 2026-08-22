@@ -2336,7 +2336,8 @@ canvas.addEventListener('pointermove', (e) => {
     const obj = hitTest(sp);
     hoverId = obj && obj.type !== 'point' ? null : (obj ? obj.id : null);
   }
-  if (hoverId !== prevHover || (snapPreview && snapPreview.label) !== prevSnap || pending.length) requestDraw();
+  if (hoverId !== prevHover || (snapPreview && snapPreview.label) !== prevSnap ||
+      pending.length || shapeBoxStart) requestDraw();
 });
 
 canvas.addEventListener('pointerup', (e) => {
