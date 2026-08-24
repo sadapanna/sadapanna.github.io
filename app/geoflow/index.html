@@ -87,6 +87,7 @@
           <div class="help-item"><span>📐</span><div><b>Angles</b>Two lines → <i>Angle between</i>. A point on a line or curve → <i>∠ N° line</i> or <i>Tangent</i> — angles that hold while you drag.</div></div>
           <div class="help-item"><span>⬠</span><div><b>Shapes</b>Pick △ ◻ ⬠ ⬡ under the Shape tool, draw corner to corner. Spin by any vertex, move by the ✛ center.</div></div>
           <div class="help-item"><span>📈</span><div><b>Graphs</b>Type <code>x^2/4</code> or <code>sin(x)</code>. Points ride the curve; limits crop it; lines intersect it.</div></div>
+          <div class="help-item"><span>🎚️</span><div><b>Sliders</b>Type <code>a*x+b</code> — unknown letters become sliders (top right). Drag them to morph the curve; the <b>≋</b> button sweeps a slider's whole range and draws the entire family at once.</div></div>
           <div class="help-item"><span>🔗</span><div><b>Link &amp; unlink</b><i>Unlink</i> names each link in plain words and breaks the ones you pick. A free point resting on a target offers <i>Link</i> to attach it back.</div></div>
           <div class="help-item"><span>💾</span><div><b>It saves itself</b>Files live in your browser (☰), export as JSON anytime, and everything works offline.</div></div>
         </div>
@@ -98,6 +99,9 @@
 
     <!-- context hint: tells the user exactly what to do next -->
     <div id="hint" aria-live="polite"></div>
+
+    <!-- variable sliders (created for letters used in graphs, e.g. a*x+b) -->
+    <div id="varsPanel" hidden></div>
 
     <!-- zoom controls -->
     <div id="zoomCtrl" aria-label="Zoom">

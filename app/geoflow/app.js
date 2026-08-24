@@ -274,24 +274,47 @@ const DERIVED_LINE_KINDS = new Set([
   'perpBisector', 'perpThrough', 'parallelThrough', 'angleBisector', 'tangentAt', 'angledAt',
 ]);
 
-function drawFunction(o, st) {
-  const fn = o._fn;
-  if (!fn) return;
-  const w = canvas.clientWidth;
-  ctx.strokeStyle = st ? st.c : C.stroke;
-  ctx.lineWidth = st ? st.w : 2;
+function strokeFunctionPath(fn, step) {
+  const w = canvas.clientWidth, H = canvas.clientHeight;
   ctx.beginPath();
   let pen = false;
-  const H = canvas.clientHeight;
-  for (let sx = 0; sx <= w; sx += 2) {
+  for (let sx = 0; sx <= w; sx += step) {
     const wx = (sx - view.tx) / view.scale;
     const wy = window.Geo.graphWorldY(fn, wx);
     if (!Number.isFinite(wy)) { pen = false; continue; }
     const sy = wy * view.scale + view.ty;
-    if (sy < -2 * H || sy > 3 * H) { pen = false; continue; } // off-screen asymptote
+    if (sy < -2 * H || sy > 3 * H) { pen = false; continue; }
     if (pen) ctx.lineTo(sx, sy); else { ctx.moveTo(sx, sy); pen = true; }
   }
   ctx.stroke();
+}
+
+function drawFunction(o, st) {
+  const fn = o._fn;
+  if (!fn) return;
+  // sweep mode: a slider marked ≋ paints the whole FAMILY of curves across
+  // its range — every value of the variable at once
+  const fam = Object.entries(engine.vars).filter(([n, v]) =>
+    v.family && new RegExp('\\b' + n + '\\b').test(o.params.expr || ''));
+  if (fam.length) {
+    ctx.save();
+    ctx.strokeStyle = st ? st.c : C.stroke;
+    ctx.lineWidth = 1.1;
+    ctx.globalAlpha = 0.13;
+    const S = 20;
+    for (const [n, v] of fam) {
+      const saved = engine._V[n];
+      for (let i = 0; i < S; i++) {
+        engine._V[n] = v.min + ((v.max - v.min) * i) / (S - 1);
+        strokeFunctionPath(fn, 3);
+      }
+      engine._V[n] = saved;
+    }
+    ctx.restore();
+  }
+  ctx.strokeStyle = st ? st.c : C.stroke;
+  ctx.lineWidth = st ? st.w : 2;
+  strokeFunctionPath(fn, 2);
   // f(x) label near the left edge of its visible run
   if (o.params && o.params.expr) {
     const wx = (30 - view.tx) / view.scale;
@@ -1016,6 +1039,7 @@ function updateToolbar() {
 
 let graphEditTarget = null;   // object id being edited, or null for new
 let graphPreviewFn = null;    // compiled fn drawn as a dashed preview while typing
+let pendingVars = [];         // unknown names in the editor that become sliders on Plot
 
 const GRAPH_FUNCS = [
   { t: 'sin', fn: true, d: 'sine' }, { t: 'cos', fn: true, d: 'cosine' },
@@ -1186,10 +1210,20 @@ function toggleGraphInput(prefill, editId) {
       graphPreviewFn = null;
       msgEl.innerHTML = defaultMsg;
     } else {
-      const fn = window.Geo.boundFn(window.Geo.compileExpr(expr), readLimits());
+      const known = Object.keys(engine.vars);
+      const unknowns = window.Geo.exprUnknownNames(expr, known)
+        .filter((n) => /^[a-zA-Z][a-zA-Z0-9]{0,7}$/.test(n));
+      pendingVars = unknowns;
+      const tempV = { ...engine._V };
+      for (const n of unknowns) if (!(n in tempV)) tempV[n] = 1;
+      const fn = window.Geo.boundFn(
+        window.Geo.compileExpr(expr, [...known, ...unknowns], tempV), readLimits());
       graphPreviewFn = fn;
       if (fn) {
-        msgEl.innerHTML = '✓ looks good — <b>Enter</b> to plot';
+        msgEl.innerHTML = unknowns.length
+          ? '✓ looks good — <b>Enter</b> to plot · new slider' + (unknowns.length > 1 ? 's' : '') +
+            ': <b>' + unknowns.join(', ') + '</b>'
+          : '✓ looks good — <b>Enter</b> to plot';
         msgEl.classList.add('ok');
       } else {
         msgEl.innerHTML = 'Keeps typing… brackets balanced? functions like <b>sin(x)</b> need brackets';
@@ -1203,12 +1237,21 @@ function toggleGraphInput(prefill, editId) {
   const go = () => {
     const expr = input.value.trim();
     if (!expr) return;
-    if (!window.Geo.compileExpr(expr)) {
+    const known = Object.keys(engine.vars);
+    const unknowns = window.Geo.exprUnknownNames(expr, known)
+      .filter((n) => /^[a-zA-Z][a-zA-Z0-9]{0,7}$/.test(n));
+    const tempV = { ...engine._V };
+    for (const n of unknowns) if (!(n in tempV)) tempV[n] = 1;
+    if (!window.Geo.compileExpr(expr, [...known, ...unknowns], tempV)) {
       input.classList.add('bad');
       msgEl.classList.remove('ok');
       msgEl.innerHTML = 'Could not read that — try <b>x^2/4</b>, <b>sin(x)*2</b>, or <b>1/x</b>';
       return;
     }
+    for (const n of unknowns) {
+      engine.setVar(n, { value: 1, min: -5, max: 5, family: false });
+    }
+    if (unknowns.length) renderVars();
     const params = { expr, ...readLimits() };
     if (graphEditTarget && engine.get(graphEditTarget)) {
       engine.get(graphEditTarget).params = params;
@@ -1218,7 +1261,10 @@ function toggleGraphInput(prefill, editId) {
     }
     commit();
     closeGraphInput();
-    updateHint('Tip: points snap onto the curve — try the Point tool on it');
+    updateHint(unknowns.length
+      ? 'Slider' + (unknowns.length > 1 ? 's ' : ' ') + unknowns.join(', ') +
+        ' added (top right) — drag them and watch the curve change'
+      : 'Tip: points snap onto the curve — try the Point tool on it');
   };
 
   gi.querySelector('.gi-plot').addEventListener('click', go);
@@ -1268,6 +1314,118 @@ function toggleGraphInput(prefill, editId) {
   refresh();
   input.focus();
   if (prefill) input.setSelectionRange(input.value.length, input.value.length);
+}
+
+/* --- variable sliders (top right): a, b, k ... used inside f(x) --- */
+
+let varCommitTimer = null;
+
+function renderVars() {
+  const panel = document.getElementById('varsPanel');
+  const names = Object.keys(engine.vars);
+  panel.hidden = names.length === 0;
+  panel.innerHTML = '';
+  if (!names.length) return;
+  const head = document.createElement('div');
+  head.className = 'vr-head';
+  head.textContent = 'Variables';
+  panel.appendChild(head);
+  for (const n of names) {
+    const v = engine.vars[n];
+    const row = document.createElement('div');
+    row.className = 'vr';
+    const top = document.createElement('div');
+    top.className = 'vr-top';
+    const nameEl = document.createElement('b');
+    nameEl.textContent = n;
+    const valEl = document.createElement('span');
+    valEl.className = 'vr-val';
+    valEl.textContent = ' = ' + (+v.value.toFixed(3));
+    const fam = document.createElement('button');
+    fam.className = 'vr-fam' + (v.family ? ' on' : '');
+    fam.textContent = '≋';
+    fam.title = 'Sweep: draw the curve for EVERY value of ' + n + ' at once';
+    fam.addEventListener('click', () => {
+      engine.vars[n].family = !engine.vars[n].family;
+      commit();
+      renderVars();
+      requestDraw();
+    });
+    const del = document.createElement('button');
+    del.className = 'vr-del';
+    del.textContent = '✕';
+    del.title = 'Remove ' + n;
+    del.addEventListener('click', () => {
+      engine.deleteVar(n);
+      commit();
+      renderVars();
+      requestDraw();
+    });
+    top.append(nameEl, valEl, fam, del);
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.min = v.min; slider.max = v.max;
+    slider.step = (v.max - v.min) / 200 || 0.01;
+    slider.value = v.value;
+    slider.addEventListener('input', () => {
+      const val = parseFloat(slider.value);
+      engine.vars[n].value = val;
+      engine._V[n] = val;
+      valEl.textContent = ' = ' + (+val.toFixed(3));
+      engine.recomputeAll();
+      requestDraw();
+      clearTimeout(varCommitTimer);
+      varCommitTimer = setTimeout(() => commit(), 600);
+    });
+    const lims = document.createElement('div');
+    lims.className = 'vr-lims';
+    const mkLim = (key) => {
+      const inp = document.createElement('input');
+      inp.value = v[key];
+      inp.inputMode = 'decimal';
+      inp.setAttribute('aria-label', key + ' of ' + n);
+      inp.addEventListener('change', () => {
+        const num = parseFloat(inp.value.replace('−', '-'));
+        if (!Number.isFinite(num)) { inp.value = v[key]; return; }
+        const patch = { [key]: num };
+        const nv = { ...engine.vars[n], ...patch };
+        if (nv.min >= nv.max) { inp.value = v[key]; return; }
+        nv.value = Math.max(nv.min, Math.min(nv.max, nv.value));
+        engine.setVar(n, nv);
+        commit();
+        renderVars();
+        requestDraw();
+      });
+      inp.addEventListener('keydown', (e) => e.stopPropagation());
+      return inp;
+    };
+    lims.append(mkLim('min'), slider, mkLim('max'));
+    row.append(top, lims);
+    panel.appendChild(row);
+  }
+  // add-a-variable footer
+  const addRow = document.createElement('div');
+  addRow.className = 'vr-add';
+  const inp = document.createElement('input');
+  inp.placeholder = '+ name';
+  inp.maxLength = 8;
+  inp.setAttribute('aria-label', 'New variable name');
+  const tryAdd = () => {
+    const n = inp.value.trim();
+    if (!/^[a-zA-Z][a-zA-Z0-9]{0,7}$/.test(n)) return;
+    if (window.Geo.exprUnknownNames(n, Object.keys(engine.vars)).length !== 1) { inp.value = ''; return; }
+    engine.setVar(n, { value: 1, min: -5, max: 5, family: false });
+    commit();
+    renderVars();
+    inp.value = '';
+  };
+  inp.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') tryAdd();
+    e.stopPropagation();
+  });
+  inp.addEventListener('change', tryAdd);
+  addRow.appendChild(inp);
+  panel.appendChild(addRow);
 }
 
 /* --- movable toolbar --- */
@@ -2654,6 +2812,7 @@ function undo() {
   lastCommitted = undoStack.pop();
   engine = Engine.deserialize(JSON.parse(lastCommitted));
   clearSelection();
+  renderVars();
   updateUndoButtons();
   scheduleSave();
   requestDraw();
@@ -2665,6 +2824,7 @@ function redo() {
   lastCommitted = redoStack.pop();
   engine = Engine.deserialize(JSON.parse(lastCommitted));
   clearSelection();
+  renderVars();
   updateUndoButtons();
   scheduleSave();
   requestDraw();
@@ -2723,6 +2883,7 @@ function loadDoc(fileId, name, data) {
   clearSelection();
   updateUndoButtons();
   updateHint();
+  renderVars();
   requestDraw();
 }
 
@@ -2948,6 +3109,7 @@ function boot() {
     updateUndoButtons();
     updateHint('Pick a tool above — try Point, then drag things with Move');
   }
+  renderVars();
   requestAnimationFrame(frame);
 
   if (location.protocol.startsWith('http') && 'serviceWorker' in navigator) {

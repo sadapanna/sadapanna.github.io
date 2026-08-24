@@ -9,24 +9,42 @@ const EPS = 1e-9;
 const UNIT = 50; // world px per math unit; math y is up, world y is down
 
 /* Compile "x^2/4", "sin(x)+1" … into a safe JS function of x (math units). */
-function compileExpr(src) {
+const EXPR_RESERVED = new Set(['x', 'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'sqrt',
+  'abs', 'log', 'ln', 'exp', 'floor', 'ceil', 'round', 'min', 'max', 'pow', 'pi', 'e']);
+
+/* names in an expression that are neither built-ins nor known variables —
+   candidates to become new sliders */
+function exprUnknownNames(src, varNames) {
+  if (typeof src !== 'string') return [];
+  const known = new Set([...EXPR_RESERVED, ...(varNames || [])]);
+  const names = (src.replace(/\s+/g, '').match(/[a-zA-Z]+/g) || []);
+  return [...new Set(names.filter((n) => !known.has(n) && !known.has(n.toLowerCase())))];
+}
+
+/* compile "a*x+b" into f(x); variable values are read LIVE from valuesRef,
+   so moving a slider needs no recompilation */
+function compileExpr(src, varNames, valuesRef) {
   if (typeof src !== 'string' || !src.trim()) return null;
+  const vars = (varNames || []).filter((n) => /^[a-zA-Z][a-zA-Z0-9]*$/.test(n) && !EXPR_RESERVED.has(n));
   const cleaned = src.replace(/\s+/g, '').replace(/\^/g, '**');
   if (!/^[0-9a-zA-Z+\-*/().,%]*$/.test(cleaned.replace(/\*\*/g, ''))) return null;
   const names = cleaned.match(/[a-zA-Z]+/g) || [];
-  const allowed = new Set(['x', 'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'sqrt',
-    'abs', 'log', 'ln', 'exp', 'floor', 'ceil', 'round', 'min', 'max', 'pow', 'pi', 'e']);
-  if (!names.every((n) => allowed.has(n.toLowerCase()))) return null;
-  const expr = cleaned
+  const allowed = new Set([...EXPR_RESERVED, ...vars]);
+  if (!names.every((n) => allowed.has(n) || allowed.has(n.toLowerCase()))) return null;
+  let expr = cleaned
     .replace(/\bln\(/g, 'Math.log(')
     .replace(/\b(sin|cos|tan|asin|acos|atan|sqrt|abs|exp|floor|ceil|round|min|max|pow|log)\(/g, 'Math.$1(')
     .replace(/\bpi\b/gi, 'Math.PI')
     .replace(/\be\b/g, 'Math.E');
+  for (const v of vars) {
+    expr = expr.replace(new RegExp('\\b' + v + '\\b', 'g'), 'V["' + v + '"]');
+  }
   try {
-    const f = new Function('x', '"use strict"; return (' + expr + ');');
-    const v = f(0.5);
-    if (typeof v !== 'number') return null;
-    return f;
+    const raw = new Function('x', 'V', '"use strict"; return (' + expr + ');');
+    const V0 = valuesRef || {};
+    const probe = raw(0.5, new Proxy({}, { get: () => 1 }));
+    if (typeof probe !== 'number') return null;
+    return (x) => raw(x, V0);
   } catch { return null; }
 }
 
@@ -194,6 +212,8 @@ class Engine {
     this.order = [];            // topological order of ids
     this.nextId = 1;
     this.labelCounters = { point: 0, other: 0 };
+    this.vars = {};      // name -> {value, min, max, family}
+    this._V = {};        // live value lookup shared with compiled functions
   }
 
   genId() { return 'o' + (this.nextId++); }
@@ -351,6 +371,21 @@ class Engine {
     } else {
       return;
     }
+    this.recomputeAll();
+  }
+
+  setVar(name, patch) {
+    const cur = this.vars[name] || { value: 1, min: -5, max: 5, family: false };
+    this.vars[name] = { ...cur, ...patch };
+    this._V[name] = this.vars[name].value;
+    this.recomputeAll();
+  }
+
+  deleteVar(name) {
+    delete this.vars[name];
+    delete this._V[name];
+    // force recompiles so exprs using it turn invalid instead of stale
+    for (const o of this.objects.values()) if (o.type === 'function') o._src = null;
     this.recomputeAll();
   }
 
@@ -641,9 +676,10 @@ class Engine {
 
       case 'function:graph': {
         const key = o.params.expr + '|' +
-          [o.params.xmin, o.params.xmax, o.params.ymin, o.params.ymax].join(',');
+          [o.params.xmin, o.params.xmax, o.params.ymin, o.params.ymax].join(',') +
+          '|' + Object.keys(this.vars).join(',');
         if (o._src !== key) {
-          o._fn = boundFn(compileExpr(o.params.expr), o.params);
+          o._fn = boundFn(compileExpr(o.params.expr, Object.keys(this.vars), this._V), o.params);
           o._src = key;
         }
         if (!o._fn) { o.valid = false; break; }
@@ -895,13 +931,15 @@ class Engine {
       }
       objs.push(rec);
     }
-    return { version: 1, nextId: this.nextId, labelCounters: this.labelCounters, objects: objs };
+    return { version: 1, nextId: this.nextId, labelCounters: this.labelCounters, vars: this.vars, objects: objs };
   }
 
   static deserialize(data) {
     const e = new Engine();
     e.nextId = data.nextId || 1;
     e.labelCounters = data.labelCounters || { point: 0, other: 0 };
+    e.vars = data.vars || {};
+    for (const [k, v] of Object.entries(e.vars)) e._V[k] = v.value;
     for (const rec of data.objects || []) {
       const o = { ...rec, valid: true };
       e.objects.set(o.id, o);
@@ -914,7 +952,7 @@ class Engine {
 
 /* exported for app.js (plain script include, no modules — offline-simple) */
 window.Geo = {
-  V, EPS, UNIT, Engine, compileExpr, graphWorldY, boundFn,
+  V, EPS, UNIT, Engine, compileExpr, graphWorldY, boundFn, exprUnknownNames,
   lineFromPoints, lineLineIntersect, lineCircleIntersect, circleCircleIntersect,
   circumcircle, footOfPerpendicular, distToSegment, closestPointOnSegment,
   polygonArea, pointInPolygon,
