@@ -420,7 +420,19 @@ body {
 #varsPanel .vr { display: flex; flex-direction: column; gap: 3px; }
 #varsPanel .vr-top { display: flex; align-items: center; gap: 4px; font-size: 13px; }
 #varsPanel .vr-top b { font-size: 14px; }
-#varsPanel .vr-val { color: var(--derived); font-weight: 600; flex: 1; }
+#varsPanel .vr-val {
+  color: var(--derived); font-weight: 600; flex: 1;
+  cursor: text; border-radius: 5px; padding: 1px 3px; margin: -1px -3px;
+}
+#varsPanel .vr-val:hover, #varsPanel .vr-val:focus-visible {
+  background: var(--bg); outline: none;
+}
+#varsPanel .vr-val-inp {
+  flex: 1; min-width: 0; width: 100%;
+  border: 1.5px solid var(--accent); outline: none;
+  font: inherit; font-size: 13px; font-weight: 600; color: var(--derived);
+  background: var(--bg); border-radius: 6px; padding: 2px 5px;
+}
 #varsPanel .vr-fam, #varsPanel .vr-del {
   border: none; background: var(--bg); color: var(--muted);
   width: 26px; height: 24px; border-radius: 7px; cursor: pointer; font-size: 13px;

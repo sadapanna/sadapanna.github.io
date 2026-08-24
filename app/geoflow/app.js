@@ -1340,7 +1340,48 @@ function renderVars() {
     nameEl.textContent = n;
     const valEl = document.createElement('span');
     valEl.className = 'vr-val';
+    valEl.tabIndex = 0;
+    valEl.title = 'Click to type an exact value for ' + n;
     valEl.textContent = ' = ' + (+v.value.toFixed(3));
+    // click the number to type an exact value (the slider is 1 of 200 steps,
+    // which is no good when you want a = 0.317 exactly)
+    const valInp = document.createElement('input');
+    valInp.className = 'vr-val-inp';
+    valInp.inputMode = 'decimal';
+    valInp.hidden = true;
+    valInp.setAttribute('aria-label', 'value of ' + n);
+    const openVal = () => {
+      valInp.value = String(+engine.vars[n].value.toFixed(6));
+      valEl.hidden = true; valInp.hidden = false;
+      valInp.focus(); valInp.select();
+    };
+    const closeVal = (apply) => {
+      if (valInp.hidden) return;
+      const num = apply ? parseFloat(valInp.value.replace('\u2212', '-')) : NaN;
+      valInp.hidden = true; valEl.hidden = false;
+      if (!Number.isFinite(num)) return;
+      const cur = engine.vars[n];
+      // typing outside the slider's window widens the window rather than clamping
+      engine.setVar(n, {
+        ...cur,
+        value: num,
+        min: Math.min(cur.min, num),
+        max: Math.max(cur.max, num),
+      });
+      commit();
+      renderVars();
+      requestDraw();
+    };
+    valEl.addEventListener('click', openVal);
+    valEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openVal(); }
+    });
+    valInp.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') closeVal(true);
+      else if (e.key === 'Escape') closeVal(false);
+      e.stopPropagation();
+    });
+    valInp.addEventListener('blur', () => closeVal(true));
     const fam = document.createElement('button');
     fam.className = 'vr-fam' + (v.family ? ' on' : '');
     fam.textContent = '≋';
@@ -1361,7 +1402,7 @@ function renderVars() {
       renderVars();
       requestDraw();
     });
-    top.append(nameEl, valEl, fam, del);
+    top.append(nameEl, valEl, valInp, fam, del);
     const slider = document.createElement('input');
     slider.type = 'range';
     slider.min = v.min; slider.max = v.max;
