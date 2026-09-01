@@ -103,11 +103,27 @@
     return typeof VideoEncoder !== 'undefined' && typeof Mp4Muxer !== 'undefined';
   }
 
+  async function pickMP4Config(width, height, fps) {
+    // Panning text is h264's worst case (full-frame motion, hard edges), so
+    // budget ~0.25 bits/pixel/frame — 1080p30 lands around 15 Mbps.
+    const bitrate = Math.min(35000000, Math.max(4000000, width * height * fps * 0.25));
+    // best profile/level the browser will take: High 4.2 (1080p60), High 4.0,
+    // Main 4.0, then Baseline 3.1 as the last resort
+    const codecs = ['avc1.64002a', 'avc1.640028', 'avc1.4d0028', 'avc1.42001f'];
+    for (const codec of codecs) {
+      const cfg = { codec, width, height, bitrate, framerate: fps, latencyMode: 'quality' };
+      try {
+        const res = await VideoEncoder.isConfigSupported(cfg);
+        if (res && res.supported) return cfg;
+      } catch (e) { /* try the next one */ }
+    }
+    throw new Error('No supported H.264 encoder configuration in this browser.');
+  }
+
   async function exportMP4(onProgress) {
     const { width, height, fps } = frameSpec();
     const s = makeSurface(width, height);
     const frames = totalFrames(fps);
-    const big = width * height > 921600;
 
     const muxer = new Mp4Muxer.Muxer({
       target: new Mp4Muxer.ArrayBufferTarget(),
@@ -120,13 +136,7 @@
       output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
       error: (e) => { encError = e; },
     });
-    encoder.configure({
-      codec: big ? 'avc1.640028' : 'avc1.42001f', // high@4.0 / baseline@3.1
-      width,
-      height,
-      bitrate: Math.min(14000000, Math.max(1500000, width * height * fps * 0.1)),
-      framerate: fps,
-    });
+    encoder.configure(await pickMP4Config(width, height, fps));
 
     // a keyframe every ~2s keeps players seekable without bloating the file
     const gop = Math.max(1, fps * 2);
@@ -178,7 +188,8 @@
     const track = stream.getVideoTracks()[0];
     const rec = new MediaRecorder(stream, {
       mimeType: mime,
-      videoBitsPerSecond: 10000000,
+      // same "text in motion" budget as MP4: ~0.25 bits/pixel/frame
+      videoBitsPerSecond: Math.min(35000000, Math.max(4000000, width * height * fps * 0.25)),
     });
     const chunks = [];
     rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
@@ -218,7 +229,7 @@
     const gifFps = fps / step;
     const delay = Math.round(1000 / gifFps);
 
-    const scale = Math.min(1, 640 / Math.max(spec.width, spec.height));
+    const scale = Math.min(1, 720 / Math.max(spec.width, spec.height));
     const w = Math.max(2, Math.round(spec.width * scale));
     const h = Math.max(2, Math.round(spec.height * scale));
     const s = makeSurface(w, h);
@@ -226,7 +237,8 @@
 
     const gif = new GIF({
       workers: 2,
-      quality: 8,
+      quality: 5, // gif.js: lower = better palette sampling
+
       dither: 'FloydSteinberg-serpentine',
       width: w,
       height: h,
