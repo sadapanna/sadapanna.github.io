@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ReadFlow — Text Highlight Videos in Your Browser | Sadapanna</title>
+<meta name="description" content="ReadFlow turns any article or quote into the classic 'text on screen, camera pans, key phrases get highlighted' video — entirely in your browser. Pick a page theme, tap beats in sync with your narration, export MP4, WebM or GIF. Free, no upload, nothing leaves your device.">
+<link rel="canonical" href="https://sadapanna.com/app/readflow/">
+<meta name="robots" content="index, follow">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sadapanna">
+<meta property="og:title" content="ReadFlow — text highlight videos in your browser">
+<meta property="og:description" content="Paste an article, select a phrase, add a beat — the camera pans in and the highlight lands. Export MP4, WebM or GIF for YouTube and Shorts. Free, local-first.">
+<meta property="og:url" content="https://sadapanna.com/app/readflow/">
+<meta property="og:image" content="https://sadapanna.com/assets/brand/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="ReadFlow — free browser tool for text highlight videos by Sadapanna">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://sadapanna.com/assets/brand/og-image.png">
+<meta name="twitter:title" content="ReadFlow — text highlight videos in your browser">
+<meta name="twitter:description" content="The 'article on screen, phrases get highlighted' video, made in a browser tab. Beats, camera moves, tap-sync, MP4/WebM/GIF export. Free and local-first.">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "ReadFlow",
+  "url": "https://sadapanna.com/app/readflow/",
+  "applicationCategory": "MultimediaApplication",
+  "operatingSystem": "Any (runs in browser)",
+  "description": "ReadFlow is a free browser tool for making text highlight videos: paste an article or quote, style the page, select phrases to create beats — each beat animates a highlight (marker swipe, underline, circle scribble, spotlight, word-by-word, typewriter and more) while the camera pans and zooms to it. Tap-sync timings to your narration, add sticker overlays, and export MP4, WebM, GIF or PNG at 16:9, 9:16 or 1:1. Everything runs client-side; nothing leaves your device.",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "featureList": [
+    "Eight animated highlight effects: marker swipe, underline draw, box, circle scribble, color pop, spotlight dim, word-by-word reveal, typewriter",
+    "Auto-framed camera pan and zoom per beat, with easing, settle and optional handheld drift",
+    "Seven page themes from clean article to newspaper, notebook and screenshot-frame quote card",
+    "Tap-sync mode: tap spacebar along your narration to time every beat",
+    "Sticker overlays (arrows, circles, emoji, images, labels) pinned to the page",
+    "MP4, WebM, GIF and PNG export at 16:9, 9:16 Shorts or 1:1 — fully client-side",
+    "Autosaves to the browser, named projects, JSON import/export, works offline"
+  ],
+  "publisher": { "@type": "Organization", "name": "Sadapanna", "url": "https://sadapanna.com/" }
+}
+</script>
+<meta name="theme-color" content="#fafafa">
+<link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="8" y="8" width="84" height="84" rx="18" fill="%234f46e5"/><rect x="24" y="30" width="52" height="7" rx="3.5" fill="%23ffffff" opacity=".9"/><rect x="24" y="46" width="52" height="7" rx="3.5" fill="%23fbbf24"/><rect x="24" y="62" width="36" height="7" rx="3.5" fill="%23ffffff" opacity=".9"/></svg>'>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ left panel ============ -->
+  <aside id="panel">
+    <header id="brand">
+      <h1>ReadFlow</h1>
+      <span class="tagline">highlight videos from text</span>
+    </header>
+
+    <nav id="tabs">
+      <button data-tab="document" class="active">Document</button>
+      <button data-tab="beats">Beats</button>
+      <button data-tab="overlays">Overlays</button>
+      <button data-tab="export">Export</button>
+    </nav>
+
+    <!-- ---------- Document tab ---------- -->
+    <section class="tab" id="tab-document">
+      <label class="field">
+        <span>Your text</span>
+        <textarea id="doc-text" rows="8" spellcheck="false" placeholder="Paste an article, quote, tweet or script excerpt…"></textarea>
+      </label>
+
+      <div class="field">
+        <span>Page theme</span>
+        <div id="theme-grid"></div>
+      </div>
+
+      <label class="field" id="author-field" hidden>
+        <span>Author line</span>
+        <input id="doc-author" type="text" placeholder="— Jane Doe, The Daily">
+      </label>
+
+      <div class="row2">
+        <label class="field"><span>Font</span>
+          <select id="doc-font">
+            <option value="Poppins">Poppins (sans)</option>
+            <option value="Georgia, 'Times New Roman', serif">Georgia (serif)</option>
+            <option value="ui-monospace, Menlo, Consolas, monospace">Monospace</option>
+            <option value="Pacifico">Pacifico (handwriting)</option>
+          </select>
+        </label>
+        <label class="field"><span>Size <output id="out-fontsize">30</output>px</span>
+          <input id="doc-fontsize" type="range" min="16" max="64" value="30">
+        </label>
+      </div>
+      <div class="row2">
+        <label class="field"><span>Line height <output id="out-lineheight">1.65</output></span>
+          <input id="doc-lineheight" type="range" min="1.1" max="2.4" step="0.05" value="1.65">
+        </label>
+        <label class="field"><span>Para gap <output id="out-paragap">0.8</output>em</span>
+          <input id="doc-paragap" type="range" min="0" max="2.5" step="0.1" value="0.8">
+        </label>
+      </div>
+      <div class="row2">
+        <label class="field"><span>Column width <output id="out-maxwidth">760</output>px</span>
+          <input id="doc-maxwidth" type="range" min="420" max="1400" step="20" value="760">
+        </label>
+        <label class="field"><span>Text color</span>
+          <span class="colorwrap"><input id="doc-textcolor" type="color" value="#1c1c28">
+          <button id="doc-textcolor-reset" class="mini" title="Use theme default">auto</button></span>
+        </label>
+      </div>
+      <p class="tip">Next: switch to the <b>Beats</b> tab and drag across the page to select a phrase.</p>
+    </section>
+
+    <!-- ---------- Beats tab ---------- -->
+    <section class="tab" id="tab-beats" hidden>
+      <div id="selection-bar">
+        <span id="selection-info">Drag across the page to select text</span>
+        <button id="add-beat" class="primary" disabled>+ Add Beat</button>
+      </div>
+
+      <div class="field">
+        <span>Beats <span id="beat-count" class="dim"></span></span>
+        <div id="beat-list"><p class="empty-note">No beats yet. Select a phrase on the page, then “Add Beat”.</p></div>
+      </div>
+
+      <details class="group">
+        <summary>Defaults for new beats</summary>
+        <div class="row2">
+          <label class="field"><span>Effect</span><select id="def-effect"></select></label>
+          <label class="field"><span>Color</span><input id="def-color" type="color" value="#ffdf3d"></label>
+        </div>
+        <div class="row3">
+          <label class="field"><span>Move-in s</span><input id="def-move" type="number" min="0" max="10" step="0.1" value="0.9"></label>
+          <label class="field"><span>Highlight s</span><input id="def-fx" type="number" min="0.05" max="10" step="0.1" value="0.8"></label>
+          <label class="field"><span>Hold s</span><input id="def-hold" type="number" min="0" max="20" step="0.1" value="1.6"></label>
+        </div>
+      </details>
+
+      <details class="group">
+        <summary>Camera</summary>
+        <label class="check"><input id="cam-establishing" type="checkbox" checked> Establishing shot (full page first)</label>
+        <label class="field" id="estholdfield"><span>Establishing hold <output id="out-esthold">1.5</output>s</span>
+          <input id="cam-esthold" type="range" min="0.3" max="6" step="0.1" value="1.5"></label>
+        <label class="check"><input id="cam-drift" type="checkbox" checked> Handheld drift during holds</label>
+        <label class="field"><span>Drift amount <output id="out-drift">5</output></span>
+          <input id="cam-driftamt" type="range" min="1" max="14" step="1" value="5"></label>
+      </details>
+
+      <details class="group">
+        <summary>Timing tools</summary>
+        <div class="row2">
+          <label class="field"><span>Fit to (seconds)</span><input id="fit-seconds" type="number" min="1" step="0.5" placeholder="30"></label>
+          <button id="fit-apply" class="ghost">Fit</button>
+        </div>
+        <div class="field">
+          <span>Tap-sync — play your narration out loud, tap <b>Space</b> when each highlight should land.</span>
+          <button id="tapsync-toggle" class="ghost">Start tap-sync</button>
+          <div id="tapsync-status" hidden></div>
+        </div>
+      </details>
+
+      <p class="tip">Total: <b id="total-duration">0.0s</b></p>
+    </section>
+
+    <!-- ---------- Overlays tab ---------- -->
+    <section class="tab" id="tab-overlays" hidden>
+      <div class="field">
+        <span>Add overlay — pick a type, then click the page to place it</span>
+        <div id="overlay-add-row">
+          <button class="ov-add ghost" data-ovtype="arrow">→ Arrow</button>
+          <button class="ov-add ghost" data-ovtype="circle">◯ Circle</button>
+          <button class="ov-add ghost" data-ovtype="emoji">😀 Emoji</button>
+          <button class="ov-add ghost" data-ovtype="label">Aa Label</button>
+          <button class="ov-add ghost" data-ovtype="image">🖼 Image</button>
+          <input id="overlay-image-input" type="file" accept="image/*" hidden>
+        </div>
+        <div id="overlay-place-hint" hidden>Click the page to place — <button id="overlay-place-cancel" class="mini">cancel</button></div>
+      </div>
+      <div id="overlay-list"><p class="empty-note">No overlays yet.</p></div>
+
+      <details class="group" open>
+        <summary>Page &amp; filters</summary>
+        <label class="check"><input id="flt-vignette" type="checkbox"> Vignette</label>
+        <label class="check"><input id="flt-grain" type="checkbox"> Film grain</label>
+        <label class="check"><input id="flt-shadow" type="checkbox" checked> Page shadow</label>
+        <label class="check"><input id="flt-progress" type="checkbox"> Progress bar</label>
+        <div class="row2">
+          <label class="field"><span>Backdrop</span>
+            <span class="colorwrap"><input id="flt-bg" type="color" value="#e9e9f2">
+            <button id="flt-bg-reset" class="mini" title="Theme default">auto</button></span>
+          </label>
+          <label class="check"><input id="flt-bggrad" type="checkbox"> Soft gradient</label>
+        </div>
+      </details>
+    </section>
+
+    <!-- ---------- Export tab ---------- -->
+    <section class="tab" id="tab-export" hidden>
+      <div class="field">
+        <span>Frame</span>
+        <div id="frame-presets">
+          <button data-preset="landscape" class="active">16:9<small>1920×1080</small></button>
+          <button data-preset="portrait">9:16<small>1080×1920</small></button>
+          <button data-preset="square">1:1<small>1080×1080</small></button>
+        </div>
+      </div>
+      <div class="row2">
+        <label class="field"><span>FPS</span>
+          <select id="frame-fps"><option value="30">30</option><option value="60">60</option></select>
+        </label>
+        <label class="check"><input id="safe-guides" type="checkbox"> Safe-area guides</label>
+      </div>
+
+      <div class="field">
+        <span>Export</span>
+        <div class="btn-grid">
+          <button id="export-mp4" class="primary">MP4</button>
+          <button id="export-webm">WebM</button>
+          <button id="export-gif">GIF</button>
+          <button id="export-png">PNG frame</button>
+        </div>
+        <div id="export-progress" role="status" aria-live="polite" hidden></div>
+      </div>
+
+      <details class="group" open>
+        <summary>Project</summary>
+        <div class="row2">
+          <input id="project-name" type="text" value="Untitled" spellcheck="false" aria-label="Project name">
+          <button id="project-save" class="ghost">Save</button>
+        </div>
+        <div id="project-list"></div>
+        <div id="project-status" role="status" aria-live="polite"></div>
+        <div class="row2">
+          <button id="project-export-json" class="ghost">Export JSON</button>
+          <button id="project-import-json" class="ghost">Import JSON</button>
+        </div>
+      </details>
+      <p class="tip">Everything renders and exports in your browser — nothing is uploaded.</p>
+    </section>
+  </aside>
+
+  <!-- ============ stage ============ -->
+  <main id="stage">
+    <div id="canvas-holder"><canvas id="preview"></canvas></div>
+    <div id="transport">
+      <button id="btn-play" class="chip" title="Play / pause (Space outside tap-sync)">
+        <svg id="ic-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg>
+        <svg id="ic-pause" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M7 5h3.6v14H7zM13.4 5H17v14h-3.6z"/></svg>
+      </button>
+      <input id="scrubber" type="range" min="0" max="1" step="0.001" value="0" aria-label="Timeline">
+      <span id="time-readout">0.0 / 0.0s</span>
+    </div>
+  </main>
+</div>
+
+<!-- vendor libs are used by exporter.js — they must define Mp4Muxer / GIF before it loads -->
+<script src="vendor/mp4-muxer.min.js"></script>
+<script src="vendor/gif.js"></script>
+
+<script src="js/doc.js"></script>
+<script src="js/camera.js"></script>
+<script src="js/highlights.js"></script>
+<script src="js/beats.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/exporter.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
