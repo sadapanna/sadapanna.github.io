@@ -9,7 +9,7 @@
   let uid = 1;
 
   function makeBeat(start, end, text) {
-    const d = (window.RF && RF.state.defaults) || { effect: 'marker', color: '#ffdf3d', moveDur: 0.9, fxDur: 0.8, hold: 1.6, camEase: 'settle', fxEase: 'easeInOut' };
+    const d = (window.RF && RF.state.defaults) || { effect: 'marker', color: '#ffdf3d', moveDur: 0.9, fxDur: 0.8, hold: 1.6, camEase: 'settle', fxEase: 'easeInOut', track: false };
     const meta = window.RFHighlights && RFHighlights.EFFECTS[d.effect];
     return {
       id: 'b' + (uid++) + '_' + Date.now().toString(36),
@@ -20,6 +20,7 @@
       bold: false,
       moveDur: d.moveDur, fxDur: d.fxDur, hold: d.hold,
       camEase: d.camEase, fxEase: d.fxEase,
+      track: !!d.track,
       zoom: 1, offsetX: 0, offsetY: 0
     };
   }
@@ -236,6 +237,13 @@
     eRow.className = 'beat-row';
     eRow.append(easeSelect('cam', b, 'camEase'), easeSelect('fx', b, 'fxEase'));
 
+    const tRow = document.createElement('label');
+    tRow.className = 'check'; tRow.style.fontSize = '12px';
+    const track = document.createElement('input');
+    track.type = 'checkbox'; track.checked = !!b.track;
+    track.addEventListener('change', () => { b.track = track.checked; RFEngine.invalidateBeat(b.id); RFEngine.emitChange(); });
+    tRow.append(track, document.createTextNode(' track words (camera follows the highlight)'));
+
     const bRow = document.createElement('label');
     bRow.className = 'check'; bRow.style.fontSize = '12px';
     const bold = document.createElement('input');
@@ -244,7 +252,7 @@
     bRow.append(bold, document.createTextNode(' bold text (color pop / reveal)'));
     bRow.style.marginBottom = '8px';
 
-    more.append(zRow, oRow, eRow, bRow);
+    more.append(zRow, oRow, eRow, tRow, bRow);
 
     div.append(head, row1, row2, more);
 

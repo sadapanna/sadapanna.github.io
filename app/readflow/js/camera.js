@@ -51,6 +51,35 @@
 
   function clamp(v, lo, hi) { return lo > hi ? (lo + hi) / 2 : Math.max(lo, Math.min(hi, v)); }
 
+  /**
+   * Tighter "track words" zoom: frame ~45% of the frame width around the local
+   * words at the focus point, clamped to the same readable limits as frameForBeat.
+   * beat.zoom stays a relative multiplier on top.
+   */
+  function trackingZoom(beat, doc, bounds, frameW) {
+    const local = Math.max(doc.fontSize * 6, Math.min(bounds.w, doc.fontSize * 13));
+    let s = frameW * 0.45 / local;
+    s = Math.min(s, MAX_TEXT_PX / doc.fontSize);
+    s = Math.max(s, MIN_TEXT_PX / doc.fontSize);
+    return s * (beat.zoom || 1);
+  }
+
+  /**
+   * Camera center for a tracked focus point: same headroom + soft page clamp
+   * as frameForBeat, with beat.offsetX/Y applied as relative nudges.
+   */
+  function trackingCenter(focus, beat, layoutObj, frameW, frameH, s) {
+    let cx = focus.x + (beat.offsetX || 0);
+    let cy = focus.y + frameH * 0.03 / s + (beat.offsetY || 0);
+    const viewW = frameW / s, viewH = frameH / s;
+    const mX = Math.min(viewW * 0.5, layoutObj.pageWidth * 0.5);
+    cx = clamp(cx, mX - viewW * 0.12, layoutObj.pageWidth - mX + viewW * 0.12);
+    if (layoutObj.pageHeight > viewH * 0.8) {
+      cy = clamp(cy, viewH * 0.35, layoutObj.pageHeight - viewH * 0.3);
+    }
+    return { x: cx, y: cy };
+  }
+
   /** interpolate cameras; zoom in log space so pan+zoom feel coupled */
   function lerpCamera(a, b, t) {
     return {
@@ -74,5 +103,5 @@
     };
   }
 
-  window.RFCamera = { fullPageCamera, frameForBeat, lerpCamera, drift, MIN_TEXT_PX, MAX_TEXT_PX };
+  window.RFCamera = { fullPageCamera, frameForBeat, trackingZoom, trackingCenter, lerpCamera, drift, MIN_TEXT_PX, MAX_TEXT_PX };
 })();

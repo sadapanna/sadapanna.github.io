@@ -209,6 +209,7 @@
     $('def-move').addEventListener('change', e => { RF.state.defaults.moveDur = Math.max(0, parseFloat(e.target.value) || 0); RFEngine.emitChange(); });
     $('def-fx').addEventListener('change', e => { RF.state.defaults.fxDur = Math.max(0.05, parseFloat(e.target.value) || 0.8); RFEngine.emitChange(); });
     $('def-hold').addEventListener('change', e => { RF.state.defaults.hold = Math.max(0, parseFloat(e.target.value) || 0); RFEngine.emitChange(); });
+    $('def-track').addEventListener('change', e => { RF.state.defaults.track = e.target.checked; RFEngine.emitChange(); });
 
     $('cam-establishing').addEventListener('change', e => {
       RF.state.camera.establishing = e.target.checked;
@@ -418,6 +419,7 @@
     $('def-move').value = s.defaults.moveDur;
     $('def-fx').value = s.defaults.fxDur;
     $('def-hold').value = s.defaults.hold;
+    $('def-track').checked = !!s.defaults.track;
 
     $('cam-establishing').checked = s.camera.establishing;
     $('estholdfield').hidden = !s.camera.establishing;

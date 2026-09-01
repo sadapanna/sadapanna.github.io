@@ -37,7 +37,7 @@
         maxWidth: 760,
         author: ''
       },
-      defaults: { effect: 'marker', color: '#ffdf3d', moveDur: 0.9, fxDur: 0.8, hold: 1.6, camEase: 'settle', fxEase: 'easeInOut' },
+      defaults: { effect: 'marker', color: '#ffdf3d', moveDur: 0.9, fxDur: 0.8, hold: 1.6, camEase: 'settle', fxEase: 'easeInOut', track: false },
       beats: [],                // see beats.js makeBeat()
       camera: { establishing: true, establishingHold: 1.5, drift: true, driftAmount: 5 },
       overlays: [],             // {id,type,x,y,beat,fadeIn,hideBeat,fadeOut,...per-type}
@@ -69,10 +69,11 @@
   }
 
   // ---------- per-beat caches (layout-dependent, invalidated by key) ----------
-  const beatCache = new Map(); // beat.id -> {key, cam, rects, spanWords}
+  const beatCache = new Map(); // beat.id -> {key, cam, rects, spanWords, trackPath}
   function beatData(beat, L) {
     const key = L.settingsKeyStr + '|' + state.frame.width + 'x' + state.frame.height + '|' +
-      beat.start + ',' + beat.end + ',' + (beat.zoom || 1) + ',' + (beat.offsetX || 0) + ',' + (beat.offsetY || 0);
+      beat.start + ',' + beat.end + ',' + (beat.zoom || 1) + ',' + (beat.offsetX || 0) + ',' + (beat.offsetY || 0) +
+      ',' + (beat.track ? 1 : 0) + ',' + beat.effect + ',' + beat.fxEase + ',' + beat.fxDur;
     let d = beatCache.get(beat.id);
     if (!d || d.key !== key) {
       d = {
@@ -81,9 +82,106 @@
         rects: RFDoc.rangeRects(state.doc, beat.start, beat.end),
         spanWords: L.words.filter(w => w.charEnd > beat.start && w.charStart < beat.end)
       };
+      d.trackPath = beat.track ? buildTrackPath(beat, d, L) : null;
       beatCache.set(beat.id, d);
     }
     return d;
+  }
+
+  // ---------- "track words" focus path (deterministic, cached) ----------
+  // The focus path is an analytic function of t: fixed waypoints are sampled
+  // once per beat (leading point of the effect at eased fx progress), turned
+  // into clamped camera centers, smoothed with a few moving-average passes
+  // (so line-wrap jumps become quick eased pans, ~0.2s), then evaluated with
+  // Catmull-Rom. Same state + t → same camera; no per-call smoothing state.
+  const TRACK_EASE_BACK = 0.9;   // max seconds of the hold used to ease back out
+  const TRACK_PAN_WIN = 0.2;     // seconds a discontinuity (line wrap) is spread over
+
+  /** leading point of the highlight at eased fx progress p, page coords */
+  function leadingPointAt(beat, d, p) {
+    const rects = d.rects;
+    if (beat.effect === 'wordreveal' && d.spanWords.length) {
+      const n = d.spanWords.length;
+      const w = d.spanWords[Math.min(n - 1, Math.floor(p * n))]; // currently-revealing word
+      return { x: w.x + w.w / 2, y: w.y + w.h / 2 };
+    }
+    if (beat.effect === 'typewriter') {
+      const cut = Math.round(beat.start + p * (beat.end - beat.start));
+      const rr = RFDoc.rangeRects(state.doc, beat.start, Math.max(beat.start + 1, cut));
+      if (rr.length) { const r = rr[rr.length - 1]; return { x: r.x + r.w, y: r.y + r.h / 2 }; } // caret
+    }
+    // sweep effects: leading edge along the span by arc length (colorpop's
+    // sweep runs 25% ahead, matching textStyle); circle/spotlight fall back
+    // to the same eased interpolation along the span.
+    const pp = beat.effect === 'colorpop' ? Math.min(1, p * 1.25) : p;
+    const total = rects.reduce((a, r) => a + r.w, 0) || 1;
+    let dist = pp * total;
+    for (const r of rects) {
+      if (dist <= r.w) return { x: r.x + dist, y: r.y + r.h / 2 };
+      dist -= r.w;
+    }
+    const last = rects[rects.length - 1];
+    return { x: last.x + last.w, y: last.y + last.h / 2 };
+  }
+
+  function buildTrackPath(beat, d, L) {
+    if (!d.rects.length) return null;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const r of d.rects) { x0 = Math.min(x0, r.x); y0 = Math.min(y0, r.y); x1 = Math.max(x1, r.x + r.w); y1 = Math.max(y1, r.y + r.h); }
+    const bounds = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+    // tighter than the beat's span framing, never looser
+    const s = Math.max(
+      RFCamera.trackingZoom(beat, state.doc, bounds, state.frame.width),
+      d.cam.s);
+    const fxDur = Math.max(0.05, beat.fxDur || 0.8);
+    const N = Math.max(32, Math.min(220, Math.round(fxDur * 60)));
+    const ease = EASINGS[beat.fxEase] || EASINGS.easeInOut;
+    let pts = [];
+    for (let i = 0; i <= N; i++) {
+      const p = Math.max(0, Math.min(1, ease(i / N)));
+      const f = leadingPointAt(beat, d, p);
+      pts.push(RFCamera.trackingCenter(f, beat, L, state.frame.width, state.frame.height, s));
+    }
+    // 3 moving-average passes → ~triangular+ kernel: C1 path, wraps become pans
+    const half = Math.max(1, Math.round(N * (TRACK_PAN_WIN / 2) / fxDur));
+    for (let pass = 0; pass < 3; pass++) {
+      const out = new Array(pts.length);
+      for (let i = 0; i < pts.length; i++) {
+        let sx = 0, sy = 0, cnt = 0;
+        for (let j = i - half; j <= i + half; j++) {
+          const k = Math.max(0, Math.min(pts.length - 1, j));
+          sx += pts[k].x; sy += pts[k].y; cnt++;
+        }
+        out[i] = { x: sx / cnt, y: sy / cnt };
+      }
+      pts = out;
+    }
+    return { s, pts };
+  }
+
+  /** evaluate the smoothed path at raw fx progress u∈[0,1] (Catmull-Rom) */
+  function trackedCamAt(d, u) {
+    const pts = d.trackPath.pts;
+    const n = pts.length - 1;
+    const x = Math.max(0, Math.min(1, u)) * n;
+    const i = Math.min(n - 1, Math.floor(x));
+    const f = x - i;
+    const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(n, i + 2)];
+    const cr = (a, b, c, e) => b + 0.5 * f * (c - a + f * (2 * a - 5 * b + 4 * c - e + f * (3 * (b - c) + e - a)));
+    return { x: cr(p0.x, p1.x, p2.x, p3.x), y: cr(p0.y, p1.y, p2.y, p3.y), s: d.trackPath.s };
+  }
+
+  /** camera within a segment's fx + hold window (t ∈ [tFx, tEnd]) */
+  function segmentCamAt(seg, d, t) {
+    if (!(seg.beat.track && d.trackPath)) return d.cam;
+    if (t < seg.tHold) {
+      return trackedCamAt(d, (t - seg.tFx) / Math.max(0.0001, seg.tHold - seg.tFx));
+    }
+    // hold: ease back out to the beat's normal full-span framing
+    const dur = Math.min(TRACK_EASE_BACK, seg.tEnd - seg.tHold);
+    if (dur < 0.0001) return trackedCamAt(d, 1);
+    const u = Math.max(0, Math.min(1, (t - seg.tHold) / dur));
+    return RFCamera.lerpCamera(trackedCamAt(d, 1), d.cam, EASINGS.easeInOut(u));
   }
 
   // ---------- camera at time t ----------
@@ -96,15 +194,17 @@
     let prevCam = full;
     for (let i = 0; i < segs.length; i++) {
       const s = segs[i];
-      const cam = beatData(s.beat, L).cam;
+      const d = beatData(s.beat, L);
       if (t < s.tFx) {
+        // move-in target: tracking start point at tracking zoom when tracked
+        const target = (s.beat.track && d.trackPath) ? trackedCamAt(d, 0) : d.cam;
         const move = s.tFx - s.tStart;
         const u = move > 0.0001 ? Math.max(0, Math.min(1, (t - s.tStart) / move)) : 1;
         const ease = EASINGS[s.beat.camEase] || EASINGS.settle;
-        return RFCamera.lerpCamera(prevCam, cam, ease(u));
+        return RFCamera.lerpCamera(prevCam, target, ease(u));
       }
-      if (t < s.tEnd) return cam;
-      prevCam = cam;
+      if (t < s.tEnd) return segmentCamAt(s, d, t);
+      prevCam = segmentCamAt(s, d, s.tEnd); // where this segment actually left the camera
     }
     return prevCam;
   }
@@ -480,7 +580,9 @@
     for (const k of ['doc', 'defaults', 'camera', 'filters', 'frame']) {
       Object.assign(fresh[k], (obj && obj[k]) || {});
     }
-    fresh.beats = Array.isArray(obj && obj.beats) ? obj.beats.map(b => Object.assign(RFBeats.makeBeat(0, 0, ''), b)) : [];
+    // {track:false} before b: old projects without the flag load as untracked,
+    // regardless of the current session's defaults.track.
+    fresh.beats = Array.isArray(obj && obj.beats) ? obj.beats.map(b => Object.assign(RFBeats.makeBeat(0, 0, ''), { track: false }, b)) : [];
     fresh.overlays = Array.isArray(obj && obj.overlays) ? obj.overlays : [];
     // replace contents of the live state object (RF.state identity must survive)
     for (const k of Object.keys(state)) delete state[k];
