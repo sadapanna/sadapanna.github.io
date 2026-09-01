@@ -21,11 +21,17 @@
   function totalLen(rects) { return rects.reduce((s, r) => s + r.w, 0); }
 
   // ---------- marker swipe ----------
+  // shared progress→sweep-fraction shaping — used by BOTH draw and leadingPoint
+  // so the tracking camera centers on the exact edge that is on screen
+  function markerShape(t) {
+    const over = 1.045; // overshoot width then settle back
+    return t < 0.85 ? easeOutCubic(t / 0.85) * over : over - (over - 1) * ((t - 0.85) / 0.15);
+  }
+
   // translucent highlighter sweeps left→right with slight overshoot + textured edge
   function marker(ctx, rects, t, opts) {
     if (t <= 0) return;
-    const over = 1.045; // overshoot width then settle back
-    const shaped = t < 0.85 ? easeOutCubic(t / 0.85) * over : over - (over - 1) * ((t - 0.85) / 0.15);
+    const shaped = markerShape(t);
     const L = totalLen(rects);
     let done = shaped * L;
     ctx.save();
@@ -198,6 +204,70 @@
     typewriter: { label: 'Typewriter',     kind: 'text',  defaultColor: '#1c1c28', hidesBefore: true }
   };
 
+  // ---------- leading-edge companions (for the "track words" camera) ----------
+  // Each returns the page-coordinate point of the effect's VISIBLE leading edge
+  // at eased progress p — computed with the SAME math its draw / textStyle uses,
+  // so the tracking camera stays glued to what is actually on screen.
+  // Signature: leadingPoint(beat, rects, p, aux) — aux = {spanWords, rangeRects}.
+
+  /** arc-length point `frac` of the way along multi-line rects (sweep fallback) */
+  function sweepPoint(rects, frac) {
+    if (!rects.length) return null;
+    const total = totalLen(rects) || 1;
+    let dist = Math.max(0, Math.min(1, frac)) * total;
+    for (const r of rects) {
+      if (dist <= r.w) return { x: r.x + dist, y: r.y + r.h / 2 };
+      dist -= r.w;
+    }
+    const last = rects[rects.length - 1];
+    return { x: last.x + last.w, y: last.y + last.h / 2 };
+  }
+
+  const clamp01 = t => Math.max(0, Math.min(1, t));
+
+  // marker: sweep tip at markerShape(t)·L — the same shaped width marker() fills
+  EFFECTS.marker.leadingPoint = (beat, rects, p) =>
+    sweepPoint(rects, Math.min(1, markerShape(clamp01(p))));
+
+  // underline: stroke tip at easeInOutCubic(t)·L, matching underline()
+  EFFECTS.underline.leadingPoint = (beat, rects, p) =>
+    sweepPoint(rects, easeInOutCubic(clamp01(p)));
+
+  // colorpop: textStyle's sweep runs 25% ahead (k uses t·1.25)
+  EFFECTS.colorpop.leadingPoint = (beat, rects, p) =>
+    sweepPoint(rects, Math.min(1, clamp01(p) * 1.25));
+
+  // wordreveal: the word currently brightening — textStyle brightens word i
+  // over t ∈ [i/n, (i+0.8)/n], so at t the revealing word is floor(t·n)
+  EFFECTS.wordreveal.leadingPoint = (beat, rects, p, aux) => {
+    const words = (aux && aux.spanWords) || [];
+    if (!words.length) return sweepPoint(rects, clamp01(p));
+    const n = words.length;
+    const w = words[Math.max(0, Math.min(n - 1, Math.floor(clamp01(p) * n)))];
+    return { x: w.x + w.w / 2, y: w.y + w.h / 2 };
+  };
+
+  // typewriter: the caret — textStyle shows floor(t·total) chars, caret after them
+  EFFECTS.typewriter.leadingPoint = (beat, rects, p, aux) => {
+    const total = beat.end - beat.start;
+    const cut = beat.start + Math.floor(clamp01(p) * total);
+    if (aux && aux.rangeRects) {
+      const rr = aux.rangeRects(beat.start, Math.max(beat.start + 1, cut));
+      if (rr.length) { const r = rr[rr.length - 1]; return { x: r.x + r.w, y: r.y + r.h / 2 }; }
+    }
+    return sweepPoint(rects, clamp01(p));
+  };
+
+  // box / circle / spotlight draw around the whole span at once — no meaningful
+  // left→right edge — so they use the sweep fallback via leadingPointFor().
+
+  /** engine entry point: the effect's own leadingPoint, or the sweep fallback */
+  function leadingPointFor(effect, beat, rects, p, aux) {
+    const meta = EFFECTS[effect];
+    if (meta && meta.leadingPoint) return meta.leadingPoint(beat, rects, p, aux);
+    return sweepPoint(rects, clamp01(p));
+  }
+
   /**
    * Per-word style for text effects.
    * fx = {effect, start, end, t, color, bold} — t is highlight progress (may be >1 after landing).
@@ -249,5 +319,5 @@
     return null;
   }
 
-  window.RFHighlights = { EFFECTS, textStyle, rgba, hexToRgb };
+  window.RFHighlights = { EFFECTS, textStyle, leadingPointFor, rgba, hexToRgb };
 })();

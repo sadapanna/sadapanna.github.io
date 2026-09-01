@@ -65,15 +65,20 @@
   }
 
   /**
-   * Camera center for a tracked focus point: same headroom + soft page clamp
-   * as frameForBeat, with beat.offsetX/Y applied as relative nudges.
+   * Camera center for a tracked focus point: same headroom as frameForBeat,
+   * with beat.offsetX/Y applied as relative nudges. The horizontal clamp is
+   * much looser than frameForBeat's (0.34 vs 0.12 view-widths of overhang):
+   * tracking must be able to keep the highlight edge near frame center even
+   * at the start/end of a line, which means letting the view hang off the
+   * page — otherwise the camera pins at the clamp and visibly trails the
+   * highlight across every line.
    */
   function trackingCenter(focus, beat, layoutObj, frameW, frameH, s) {
     let cx = focus.x + (beat.offsetX || 0);
     let cy = focus.y + frameH * 0.03 / s + (beat.offsetY || 0);
     const viewW = frameW / s, viewH = frameH / s;
     const mX = Math.min(viewW * 0.5, layoutObj.pageWidth * 0.5);
-    cx = clamp(cx, mX - viewW * 0.12, layoutObj.pageWidth - mX + viewW * 0.12);
+    cx = clamp(cx, mX - viewW * 0.34, layoutObj.pageWidth - mX + viewW * 0.34);
     if (layoutObj.pageHeight > viewH * 0.8) {
       cy = clamp(cy, viewH * 0.35, layoutObj.pageHeight - viewH * 0.3);
     }

@@ -90,38 +90,23 @@
 
   // ---------- "track words" focus path (deterministic, cached) ----------
   // The focus path is an analytic function of t: fixed waypoints are sampled
-  // once per beat (leading point of the effect at eased fx progress), turned
-  // into clamped camera centers, smoothed with a few moving-average passes
-  // (so line-wrap jumps become quick eased pans, ~0.2s), then evaluated with
+  // once per beat (the effect's OWN leading edge at eased fx progress, via
+  // RFHighlights.leadingPointFor), turned into clamped camera centers, lightly
+  // smoothed (so line-wrap jumps become quick eased pans, ~0.2s, while
+  // within-line tracking stays essentially exact), then evaluated with
   // Catmull-Rom. Same state + t → same camera; no per-call smoothing state.
   const TRACK_EASE_BACK = 0.9;   // max seconds of the hold used to ease back out
   const TRACK_PAN_WIN = 0.2;     // seconds a discontinuity (line wrap) is spread over
 
-  /** leading point of the highlight at eased fx progress p, page coords */
+  /** leading point of the highlight at eased fx progress p, page coords.
+   * Delegated to the effect's own leadingPoint companion in highlights.js so
+   * the camera focus comes from the SAME math the draw uses (marker overshoot,
+   * per-word stepping, per-char caret, colorpop's 1.25× lead). */
   function leadingPointAt(beat, d, p) {
-    const rects = d.rects;
-    if (beat.effect === 'wordreveal' && d.spanWords.length) {
-      const n = d.spanWords.length;
-      const w = d.spanWords[Math.min(n - 1, Math.floor(p * n))]; // currently-revealing word
-      return { x: w.x + w.w / 2, y: w.y + w.h / 2 };
-    }
-    if (beat.effect === 'typewriter') {
-      const cut = Math.round(beat.start + p * (beat.end - beat.start));
-      const rr = RFDoc.rangeRects(state.doc, beat.start, Math.max(beat.start + 1, cut));
-      if (rr.length) { const r = rr[rr.length - 1]; return { x: r.x + r.w, y: r.y + r.h / 2 }; } // caret
-    }
-    // sweep effects: leading edge along the span by arc length (colorpop's
-    // sweep runs 25% ahead, matching textStyle); circle/spotlight fall back
-    // to the same eased interpolation along the span.
-    const pp = beat.effect === 'colorpop' ? Math.min(1, p * 1.25) : p;
-    const total = rects.reduce((a, r) => a + r.w, 0) || 1;
-    let dist = pp * total;
-    for (const r of rects) {
-      if (dist <= r.w) return { x: r.x + dist, y: r.y + r.h / 2 };
-      dist -= r.w;
-    }
-    const last = rects[rects.length - 1];
-    return { x: last.x + last.w, y: last.y + last.h / 2 };
+    return RFHighlights.leadingPointFor(beat.effect, beat, d.rects, p, {
+      spanWords: d.spanWords,
+      rangeRects: (s, e) => RFDoc.rangeRects(state.doc, s, e)
+    });
   }
 
   function buildTrackPath(beat, d, L) {
@@ -134,7 +119,7 @@
       RFCamera.trackingZoom(beat, state.doc, bounds, state.frame.width),
       d.cam.s);
     const fxDur = Math.max(0.05, beat.fxDur || 0.8);
-    const N = Math.max(32, Math.min(220, Math.round(fxDur * 60)));
+    const N = Math.max(48, Math.min(360, Math.round(fxDur * 120)));
     const ease = EASINGS[beat.fxEase] || EASINGS.easeInOut;
     let pts = [];
     for (let i = 0; i <= N; i++) {
@@ -142,9 +127,12 @@
       const f = leadingPointAt(beat, d, p);
       pts.push(RFCamera.trackingCenter(f, beat, L, state.frame.width, state.frame.height, s));
     }
-    // 3 moving-average passes → ~triangular+ kernel: C1 path, wraps become pans
-    const half = Math.max(1, Math.round(N * (TRACK_PAN_WIN / 2) / fxDur));
-    for (let pass = 0; pass < 3; pass++) {
+    // 2 light moving-average passes → triangular kernel, C1 path. Window sized so
+    // a line-wrap step spreads over ~TRACK_PAN_WIN seconds (2 passes of width
+    // 2·half+1 ≈ 4·half samples of support) while within-line tracking stays
+    // essentially exact — heavier smoothing visibly lags the highlight edge.
+    const half = Math.max(1, Math.round(N * (TRACK_PAN_WIN / 4) / fxDur));
+    for (let pass = 0; pass < 2; pass++) {
       const out = new Array(pts.length);
       for (let i = 0; i < pts.length; i++) {
         let sx = 0, sy = 0, cnt = 0;
