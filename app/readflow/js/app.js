@@ -1,5 +1,5 @@
-/* ReadFlow app.js — UI wiring: Document → Beats → Overlays → Export flow.
- * Owns the preview canvas (device-pixel crisp), transport, tabs, doc/theme
+/* ReadFlow app.js — UI wiring: ① Text → ② Style → ③ Beats → ④ Export wizard.
+ * Owns the preview canvas (device-pixel crisp), transport, stepper, doc/theme
  * controls, overlay editor, filters and frame presets. Export/storage buttons
  * exist in the DOM but are wired by exporter.js / storage.js.
  */
@@ -124,12 +124,30 @@
     }
   });
 
-  // =================== tabs ===================
-  document.querySelectorAll('#tabs button').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('active', b === btn));
-      document.querySelectorAll('.tab').forEach(s => { s.hidden = s.id !== 'tab-' + btn.dataset.tab; });
+  // =================== stepper (① Text → ② Style → ③ Beats → ④ Export) ===================
+  // Steps are navigation, never gates — every step is always one click away.
+  const STEP_IDS = ['step-text', 'step-style', 'step-beats', 'step-export'];
+
+  function goStep(i) {
+    i = Math.max(0, Math.min(STEP_IDS.length - 1, i));
+    STEP_IDS.forEach((id, k) => { $(id).hidden = k !== i; });
+    document.querySelectorAll('#stepper button').forEach(b => {
+      const k = parseInt(b.dataset.step, 10);
+      b.classList.toggle('active', k === i);
+      b.classList.toggle('done', k < i);
     });
+    const panel = document.getElementById('panel');
+    if (panel) panel.scrollTop = 0;
+    const sec = $(STEP_IDS[i]);
+    if (sec) sec.scrollTop = 0;
+  }
+  app.goStep = goStep;
+
+  document.querySelectorAll('#stepper button').forEach(btn => {
+    btn.addEventListener('click', () => goStep(parseInt(btn.dataset.step, 10)));
+  });
+  document.querySelectorAll('.step-nav button[data-go]').forEach(btn => {
+    btn.addEventListener('click', () => goStep(parseInt(btn.dataset.go, 10)));
   });
 
   // =================== document tab ===================
@@ -143,7 +161,7 @@
       if (key === RF.state.doc.theme) b.classList.add('active');
       b.addEventListener('click', () => {
         RF.state.doc.theme = key;
-        if (th.suggestFont) { RF.state.doc.fontFamily = th.suggestFont; $('doc-font').value = th.suggestFont; }
+        if (th.suggestFont) { RF.state.doc.fontFamily = th.suggestFont; syncFontUI(); }
         if (th.suggestWidth) { RF.state.doc.maxWidth = th.suggestWidth; $('doc-maxwidth').value = th.suggestWidth; $('out-maxwidth').value = th.suggestWidth; }
         $('author-field').hidden = !th.hasAuthor;
         grid.querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
@@ -152,6 +170,208 @@
       grid.appendChild(b);
     }
     $('author-field').hidden = !(RFDoc.THEMES[RF.state.doc.theme] || {}).hasAuthor;
+  }
+
+  // =================== font picker ===================
+  // Bundled + system faces stay first and work with zero network. Google families
+  // come from the static catalog in js/fonts.js and are fetched only on demand.
+  const BUNDLED_FONTS = [
+    { label: 'Poppins (sans)', value: 'Poppins' },
+    { label: 'Georgia (serif)', value: "Georgia, 'Times New Roman', serif" },
+    { label: 'Monospace', value: 'ui-monospace, Menlo, Consolas, monospace' },
+    { label: 'Pacifico (handwriting)', value: 'Pacifico' }
+  ];
+
+  function fontLabelFor(value) {
+    const b = BUNDLED_FONTS.find(f => f.value === value);
+    if (b) return b.label;
+    const g = RFFonts.googleFamilyOf(value);
+    if (g) return g;
+    return String(value || '').split(',')[0].replace(/["']/g, '') || 'Default';
+  }
+
+  function showFontNote(msg) {
+    const el = $('font-note');
+    if (!el) return;
+    if (!msg) { el.hidden = true; el.textContent = ''; return; }
+    el.textContent = msg;
+    el.hidden = false;
+    clearTimeout(showFontNote._t);
+    showFontNote._t = setTimeout(() => { el.hidden = true; }, 9000);
+  }
+
+  function buildFontList() {
+    const list = $('font-list');
+    if (!list || list.childElementCount) return;
+    const frag = document.createDocumentFragment();
+
+    const addGroup = name => {
+      const h = document.createElement('div');
+      h.className = 'fp-group';
+      h.textContent = name;
+      frag.appendChild(h);
+    };
+    const addItem = (value, label, search, cat) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.value = value;
+      b.dataset.search = search.toLowerCase();
+      b.textContent = label;
+      if (cat) {
+        const s = document.createElement('span');
+        s.className = 'fp-cat';
+        s.textContent = cat;
+        b.appendChild(s);
+      }
+      frag.appendChild(b);
+    };
+
+    addGroup('Bundled (offline)');
+    for (const f of BUNDLED_FONTS) addItem(f.value, f.label, f.label);
+
+    addGroup('Google Fonts (fetched on pick)');
+    for (const e of RFFonts.CATALOG) {
+      addItem(RFFonts.cssValue(e.family), e.family,
+              e.family + ' ' + e.category, RFFonts.CATEGORY_LABEL[e.category] || e.category);
+    }
+    list.appendChild(frag);
+  }
+
+  function filterFontList(q) {
+    const list = $('font-list');
+    const needle = q.trim().toLowerCase();
+    let visible = 0, lastGroup = null, groupHas = false;
+    for (const el of list.children) {
+      if (el.classList.contains('fp-group')) {
+        if (lastGroup) lastGroup.hidden = !groupHas;
+        lastGroup = el; groupHas = false;
+        continue;
+      }
+      const show = !needle || el.dataset.search.indexOf(needle) !== -1;
+      el.hidden = !show;
+      if (show) { visible++; groupHas = true; }
+    }
+    if (lastGroup) lastGroup.hidden = !groupHas;
+    $('font-empty').hidden = visible > 0;
+  }
+
+  function openFontMenu(open) {
+    const menu = $('font-menu');
+    menu.hidden = !open;
+    $('font-trigger').setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) {
+      buildFontList();
+      $('font-search').value = '';
+      filterFontList('');
+      syncFontUI();
+      const active = $('font-list').querySelector('button.active');
+      if (active) active.scrollIntoView({ block: 'nearest' });
+      $('font-search').focus();
+    }
+  }
+
+  /** reflect RF.state.doc.fontFamily into the trigger label + list selection */
+  function syncFontUI() {
+    const v = RF.state.doc.fontFamily;
+    $('font-current').textContent = fontLabelFor(v);
+    const list = $('font-list');
+    if (list.childElementCount) {
+      for (const el of list.children) {
+        if (el.tagName === 'BUTTON') el.classList.toggle('active', el.dataset.value === v);
+      }
+    }
+  }
+
+  function setFontLoading(on) {
+    $('font-picker').classList.toggle('loading', !!on);
+  }
+
+  /** a Google font finished loading after layout ran → drop cached metrics, re-render */
+  function fontBecameReady() {
+    RFDoc.clearCache();
+    RFEngine.invalidateAll();
+    RFEngine.emitChange();
+    requestRender();
+  }
+
+  /**
+   * Make sure whatever family the state names is actually loaded. Called on boot
+   * and after a project load, so a project that references a Google font pulls it
+   * in automatically; falls back silently-but-visibly if it can't be fetched.
+   */
+  function ensureFontForState() {
+    const fam = RFFonts.googleFamilyOf(RF.state.doc.fontFamily);
+    if (!fam || RFFonts.isLoaded(fam)) return;
+    setFontLoading(true);
+    RFFonts.ensure(fam).then(() => {
+      setFontLoading(false);
+      fontBecameReady();
+    }).catch(() => {
+      setFontLoading(false);
+      showFontNote('Couldn’t fetch “' + fam + '” from Google Fonts — showing a system fallback. Bundled fonts still work offline.');
+      fontBecameReady();
+    });
+  }
+
+  /** user picked a font in the list */
+  function chooseFont(value) {
+    const prev = RF.state.doc.fontFamily;
+    const fam = RFFonts.googleFamilyOf(value);
+    showFontNote('');
+
+    if (!fam || RFFonts.isLoaded(fam)) {
+      RF.state.doc.fontFamily = value;
+      syncFontUI();
+      RFDoc.clearCache();
+      docChanged();
+      return;
+    }
+
+    // apply optimistically (the CSS value carries a generic fallback), then
+    // re-layout for real once the woff2 has landed
+    RF.state.doc.fontFamily = value;
+    syncFontUI();
+    setFontLoading(true);
+    RFDoc.clearCache();
+    docChanged();
+
+    RFFonts.ensure(fam).then(() => {
+      setFontLoading(false);
+      if (RF.state.doc.fontFamily === value) fontBecameReady();
+    }).catch(() => {
+      setFontLoading(false);
+      if (RF.state.doc.fontFamily !== value) return;
+      RF.state.doc.fontFamily = prev;          // graceful fallback to the last font
+      syncFontUI();
+      showFontNote('Couldn’t fetch “' + fam + '” from Google Fonts. Check your connection — bundled fonts work offline.');
+      RFDoc.clearCache();
+      docChanged();
+    });
+  }
+
+  function bindFontPicker() {
+    $('font-trigger').addEventListener('click', () => {
+      openFontMenu($('font-menu').hidden);
+    });
+    $('font-search').addEventListener('input', e => filterFontList(e.target.value));
+    $('font-search').addEventListener('keydown', e => {
+      if (e.key === 'Escape') { openFontMenu(false); $('font-trigger').focus(); }
+      if (e.key === 'Enter') {
+        const first = Array.from($('font-list').children)
+          .find(el => el.tagName === 'BUTTON' && !el.hidden);
+        if (first) { chooseFont(first.dataset.value); openFontMenu(false); }
+      }
+      e.stopPropagation(); // don't let the transport's space/arrow shortcuts fire
+    });
+    $('font-list').addEventListener('click', e => {
+      const b = e.target.closest('button');
+      if (!b || !b.dataset.value) return;
+      chooseFont(b.dataset.value);
+      openFontMenu(false);
+    });
+    document.addEventListener('click', e => {
+      if (!$('font-menu').hidden && !$('font-picker').contains(e.target)) openFontMenu(false);
+    });
   }
 
   function docChanged() {
@@ -173,7 +393,12 @@
       docChanged();
     });
     $('doc-author').addEventListener('input', e => { RF.state.doc.author = e.target.value; docChanged(); });
-    $('doc-font').addEventListener('change', e => { RF.state.doc.fontFamily = e.target.value; docChanged(); });
+    $('btn-example').addEventListener('click', () => {
+      const ta = $('doc-text');
+      ta.value = SAMPLE_TEXT;
+      // run the same path as typing so beats that no longer fit are dropped
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+    });
     bindRange('doc-fontsize', 'out-fontsize', v => { RF.state.doc.fontSize = v; docChanged(); });
     bindRange('doc-lineheight', 'out-lineheight', v => { RF.state.doc.lineHeight = v; docChanged(); });
     bindRange('doc-paragap', 'out-paragap', v => { RF.state.doc.paraSpacing = v; docChanged(); });
@@ -190,7 +415,17 @@
     });
   }
 
-  // =================== beats tab (camera + defaults) ===================
+  // =================== beats step (camera + defaults) ===================
+  const round2 = v => Math.round(v * 100) / 100;
+
+  /** reflect the sum of the three default timings into the "Speed" slider */
+  function syncDefSpeedUI() {
+    const d = RF.state.defaults;
+    const t = d.moveDur + d.fxDur + d.hold;
+    $('def-speed').value = t;
+    $('out-defspeed').value = (Math.round(t * 10) / 10).toFixed(1);
+  }
+
   function bindBeatControls() {
     const defEff = $('def-effect');
     for (const [key, meta] of Object.entries(RFHighlights.EFFECTS)) {
@@ -206,9 +441,26 @@
       RFEngine.emitChange();
     });
     $('def-color').addEventListener('input', e => { RF.state.defaults.color = e.target.value; RFEngine.emitChange(); });
-    $('def-move').addEventListener('change', e => { RF.state.defaults.moveDur = Math.max(0, parseFloat(e.target.value) || 0); RFEngine.emitChange(); });
-    $('def-fx').addEventListener('change', e => { RF.state.defaults.fxDur = Math.max(0.05, parseFloat(e.target.value) || 0.8); RFEngine.emitChange(); });
-    $('def-hold').addEventListener('change', e => { RF.state.defaults.hold = Math.max(0, parseFloat(e.target.value) || 0); RFEngine.emitChange(); });
+    $('def-move').addEventListener('change', e => { RF.state.defaults.moveDur = Math.max(0, parseFloat(e.target.value) || 0); syncDefSpeedUI(); RFEngine.emitChange(); });
+    $('def-fx').addEventListener('change', e => { RF.state.defaults.fxDur = Math.max(0.05, parseFloat(e.target.value) || 0.8); syncDefSpeedUI(); RFEngine.emitChange(); });
+    $('def-hold').addEventListener('change', e => { RF.state.defaults.hold = Math.max(0, parseFloat(e.target.value) || 0); syncDefSpeedUI(); RFEngine.emitChange(); });
+
+    // one "Speed" concept: total seconds per beat, distributed proportionally
+    // over camera travel / highlight / pause so their character is kept
+    $('def-speed').addEventListener('input', e => {
+      const d = RF.state.defaults;
+      const target = Math.max(0.5, parseFloat(e.target.value) || 3.3);
+      const cur = Math.max(0.15, d.moveDur + d.fxDur + d.hold);
+      const k = target / cur;
+      d.moveDur = round2(d.moveDur * k);
+      d.fxDur = Math.max(0.05, round2(d.fxDur * k));
+      d.hold = round2(d.hold * k);
+      $('def-move').value = d.moveDur;
+      $('def-fx').value = d.fxDur;
+      $('def-hold').value = d.hold;
+      $('out-defspeed').value = (Math.round(target * 10) / 10).toFixed(1);
+      RFEngine.emitChange();
+    });
     $('def-track').addEventListener('change', e => { RF.state.defaults.track = e.target.checked; RFEngine.emitChange(); });
 
     $('cam-establishing').addEventListener('change', e => {
@@ -406,7 +658,8 @@
     const s = RF.state;
     $('doc-text').value = s.doc.text;
     $('doc-author').value = s.doc.author || '';
-    $('doc-font').value = s.doc.fontFamily;
+    syncFontUI();
+    ensureFontForState();
     $('doc-fontsize').value = s.doc.fontSize; $('out-fontsize').value = s.doc.fontSize;
     $('doc-lineheight').value = s.doc.lineHeight; $('out-lineheight').value = s.doc.lineHeight;
     $('doc-paragap').value = s.doc.paraSpacing; $('out-paragap').value = s.doc.paraSpacing;
@@ -420,6 +673,7 @@
     $('def-fx').value = s.defaults.fxDur;
     $('def-hold').value = s.defaults.hold;
     $('def-track').checked = !!s.defaults.track;
+    syncDefSpeedUI();
 
     $('cam-establishing').checked = s.camera.establishing;
     $('estholdfield').hidden = !s.camera.establishing;
@@ -452,6 +706,7 @@
     RFBeats.init();
     RFBeats.attachSelection(canvas, () => { RFBeats.updateSelectionUI(); requestRender(); });
     initThemeGrid();
+    bindFontPicker();
     bindDocControls();
     bindBeatControls();
     bindOverlayControls();

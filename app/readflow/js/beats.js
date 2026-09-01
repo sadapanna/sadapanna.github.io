@@ -118,6 +118,7 @@
     if (!selection.active) return;
     const b = makeBeat(selection.start, selection.end, selectedText());
     RF.state.beats.push(b);
+    expandedIds.add(b.id); // open the inline editor so the new beat is obvious
     clearSelection();
     updateSelectionUI();
     renderList();
@@ -134,7 +135,7 @@
       els.selInfo.classList.add('has');
       els.addBtn.disabled = false;
     } else {
-      els.selInfo.textContent = RF.state.doc.text ? 'Drag across the page to select text' : 'Paste some text in the Document tab first';
+      els.selInfo.textContent = RF.state.doc.text ? 'Drag on the page → to select' : 'Add text in step ① first';
       els.selInfo.classList.remove('has');
       els.addBtn.disabled = true;
     }
@@ -142,13 +143,30 @@
 
   function fmtTime(s) { return (Math.round(s * 10) / 10).toFixed(1); }
 
+  // plain-English names for the easing curves (values stay the engine's names)
+  const EASE_LABELS = {
+    settle: 'Smooth (recommended)',
+    easeInOut: 'Ease in & out',
+    easeOut: 'Ease out',
+    easeIn: 'Ease in',
+    linear: 'Constant speed'
+  };
+
+  // which beats have their inline editor / advanced section open (survives re-render)
+  const expandedIds = new Set();
+  const advOpenIds = new Set();
+
   function renderList() {
     const beats = RF.state.beats;
     els.count.textContent = beats.length ? '(' + beats.length + ')' : '';
     els.total.textContent = fmtTime(RF.getTotalDuration()) + 's';
     els.list.innerHTML = '';
     if (!beats.length) {
-      els.list.innerHTML = '<p class="empty-note">No beats yet. Select a phrase on the page, then “Add Beat”.</p>';
+      els.list.innerHTML =
+        '<div class="empty-beats">' +
+        '<span class="eb-icon">👉</span>' +
+        '<p><b>No beats yet.</b><br>Drag across the page on the right to select a phrase, then press <b>+ Add beat</b>. Each beat is one highlight + camera move.</p>' +
+        '</div>';
       return;
     }
     beats.forEach((b, i) => els.list.appendChild(beatItem(b, i)));
@@ -156,105 +174,59 @@
 
   function beatItem(b, i) {
     const div = document.createElement('div');
-    div.className = 'beat-item';
+    div.className = 'beat-item' + (expandedIds.has(b.id) ? ' open' : '');
     div.draggable = true;
     div.dataset.index = i;
 
-    // --- head: grip, number, snippet, delete ---
+    // --- head reads like a sentence: ⠿ ② "the hidden cost" · Marker · 2.4s ✕ ---
     const head = document.createElement('div');
     head.className = 'beat-head';
+    head.title = 'Click to edit this beat';
     head.innerHTML = '<span class="bi-grip" title="Drag to reorder">⠿</span>' +
       '<span class="bi-num">' + (i + 1) + '</span>';
     const snippet = document.createElement('span');
     snippet.className = 'bi-text';
     snippet.textContent = '“' + (b.text || RF.state.doc.text.slice(b.start, b.end).slice(0, 40)) + '”';
-    snippet.title = 'Click to jump to this beat';
-    snippet.addEventListener('click', () => {
-      const segs = RFEngine.beatSegments();
-      if (segs[i]) RFEngine.player.seek(segs[i].tHold);
-    });
+    const meta = document.createElement('span');
+    meta.className = 'bi-meta';
+    const effMeta = RFHighlights.EFFECTS[b.effect];
+    meta.textContent = '· ' + ((effMeta && effMeta.label) || b.effect) + ' · ' + fmtTime(b.moveDur + b.fxDur + b.hold) + 's';
+    const caret = document.createElement('span');
+    caret.className = 'bi-caret';
+    caret.textContent = expandedIds.has(b.id) ? '▾' : '▸';
     const del = document.createElement('button');
     del.className = 'bi-del'; del.textContent = '✕'; del.title = 'Delete beat';
-    del.addEventListener('click', () => {
+    del.addEventListener('click', e => {
+      e.stopPropagation();
       RF.state.beats.splice(i, 1);
+      expandedIds.delete(b.id); advOpenIds.delete(b.id);
       RFEngine.invalidateBeat(b.id);
       renderList(); RFEngine.emitChange();
     });
-    head.append(snippet, del);
+    head.append(snippet, meta, caret, del);
 
-    // --- effect + color ---
-    const row1 = document.createElement('div');
-    row1.className = 'beat-row';
-    const effSel = document.createElement('select');
-    for (const [key, meta] of Object.entries(RFHighlights.EFFECTS)) {
-      const o = document.createElement('option');
-      o.value = key; o.textContent = meta.label;
-      if (key === b.effect) o.selected = true;
-      effSel.appendChild(o);
-    }
-    effSel.addEventListener('change', () => {
-      b.effect = effSel.value;
-      const meta = RFHighlights.EFFECTS[b.effect];
-      if (meta && meta.defaultColor && !b._userColor) { b.color = meta.defaultColor; colorInp.value = meta.defaultColor; }
-      RFEngine.emitChange();
+    // clicking the row expands the editor and previews the beat's landing moment
+    head.addEventListener('click', () => {
+      if (expandedIds.has(b.id)) expandedIds.delete(b.id);
+      else expandedIds.add(b.id);
+      const segs = RFEngine.beatSegments();
+      if (segs[i]) { RFEngine.player.pause(); RFEngine.player.seek(segs[i].tHold); }
+      renderList();
     });
-    const colorInp = document.createElement('input');
-    colorInp.type = 'color'; colorInp.value = b.color;
-    colorInp.addEventListener('input', () => { b.color = colorInp.value; b._userColor = true; RFEngine.emitChange(); });
-    row1.append(effSel, colorInp);
 
-    // --- timings (inline) ---
-    const row2 = document.createElement('div');
-    row2.className = 'beat-row';
-    row2.append(
-      timeInput('move', b, 'moveDur', 0),
-      timeInput('fx', b, 'fxDur', 0.05),
-      timeInput('hold', b, 'hold', 0)
-    );
+    // --- inline editor (only when expanded) ---
+    const editor = document.createElement('div');
+    editor.className = 'beat-editor';
+    if (expandedIds.has(b.id)) {
+      editor.append(
+        editorMainRows(b, i, meta),
+        editorAdvanced(b, i, meta)
+      );
+    } else {
+      editor.hidden = true;
+    }
 
-    // --- more: zoom nudge, offsets, easings, bold ---
-    const more = document.createElement('details');
-    more.className = 'beat-more';
-    more.innerHTML = '<summary>camera &amp; easing</summary>';
-    const zRow = document.createElement('div');
-    zRow.className = 'beat-row';
-    zRow.innerHTML = '<span class="lbl">zoom</span>';
-    const zoom = document.createElement('input');
-    zoom.type = 'range'; zoom.min = '0.45'; zoom.max = '2.2'; zoom.step = '0.05'; zoom.value = b.zoom;
-    zoom.addEventListener('input', () => { b.zoom = parseFloat(zoom.value); RFEngine.invalidateBeat(b.id); RFEngine.emitChange(); });
-    const zReset = document.createElement('button');
-    zReset.className = 'mini'; zReset.textContent = 'auto';
-    zReset.addEventListener('click', () => { b.zoom = 1; b.offsetX = 0; b.offsetY = 0; zoom.value = 1; RFEngine.invalidateBeat(b.id); RFEngine.emitChange(); });
-    zRow.append(zoom, zReset);
-
-    const oRow = document.createElement('div');
-    oRow.className = 'beat-row';
-    oRow.innerHTML = '<span class="lbl">nudge</span>';
-    const nx = nudgeInput(b, 'offsetX', '↔'), ny = nudgeInput(b, 'offsetY', '↕');
-    oRow.append(nx, ny);
-
-    const eRow = document.createElement('div');
-    eRow.className = 'beat-row';
-    eRow.append(easeSelect('cam', b, 'camEase'), easeSelect('fx', b, 'fxEase'));
-
-    const tRow = document.createElement('label');
-    tRow.className = 'check'; tRow.style.fontSize = '12px';
-    const track = document.createElement('input');
-    track.type = 'checkbox'; track.checked = !!b.track;
-    track.addEventListener('change', () => { b.track = track.checked; RFEngine.invalidateBeat(b.id); RFEngine.emitChange(); });
-    tRow.append(track, document.createTextNode(' track words (camera follows the highlight)'));
-
-    const bRow = document.createElement('label');
-    bRow.className = 'check'; bRow.style.fontSize = '12px';
-    const bold = document.createElement('input');
-    bold.type = 'checkbox'; bold.checked = !!b.bold;
-    bold.addEventListener('change', () => { b.bold = bold.checked; RFEngine.emitChange(); });
-    bRow.append(bold, document.createTextNode(' bold text (color pop / reveal)'));
-    bRow.style.marginBottom = '8px';
-
-    more.append(zRow, oRow, eRow, tRow, bRow);
-
-    div.append(head, row1, row2, more);
+    div.append(head, editor);
 
     // --- drag reorder ---
     div.addEventListener('dragstart', e => {
@@ -277,11 +249,138 @@
     return div;
   }
 
-  function timeInput(label, b, prop, min) {
+  /** effect + color + single Speed slider — the common path */
+  function editorMainRows(b, i, metaEl) {
+    const frag = document.createDocumentFragment();
+
+    const row1 = document.createElement('div');
+    row1.className = 'beat-row';
+    const effSel = document.createElement('select');
+    effSel.title = 'Highlight style';
+    for (const [key, m] of Object.entries(RFHighlights.EFFECTS)) {
+      const o = document.createElement('option');
+      o.value = key; o.textContent = m.label;
+      if (key === b.effect) o.selected = true;
+      effSel.appendChild(o);
+    }
+    effSel.addEventListener('change', () => {
+      b.effect = effSel.value;
+      const m = RFHighlights.EFFECTS[b.effect];
+      if (m && m.defaultColor && !b._userColor) { b.color = m.defaultColor; colorInp.value = m.defaultColor; }
+      refreshMeta(b, metaEl);
+      RFEngine.emitChange();
+    });
+    const colorInp = document.createElement('input');
+    colorInp.type = 'color'; colorInp.value = b.color; colorInp.title = 'Highlight color';
+    colorInp.addEventListener('input', () => { b.color = colorInp.value; b._userColor = true; RFEngine.emitChange(); });
+    row1.append(effSel, colorInp);
+
+    // one "Speed" slider = total seconds for this beat; the three underlying
+    // timings scale proportionally so the beat keeps its character
+    const speedField = document.createElement('label');
+    speedField.className = 'field';
+    const sLbl = document.createElement('span');
+    const sOut = document.createElement('output');
+    const total = () => b.moveDur + b.fxDur + b.hold;
+    sOut.value = fmtTime(total());
+    sLbl.append('Speed — this beat takes ', sOut, 's');
+    const speed = document.createElement('input');
+    speed.type = 'range'; speed.min = '0.5'; speed.max = '12'; speed.step = '0.1';
+    speed.value = total();
+    speed.addEventListener('input', () => {
+      const target = Math.max(0.5, parseFloat(speed.value));
+      const cur = Math.max(0.15, total());
+      const k = target / cur;
+      b.moveDur = Math.round(b.moveDur * k * 100) / 100;
+      b.fxDur = Math.max(0.05, Math.round(b.fxDur * k * 100) / 100);
+      b.hold = Math.round(b.hold * k * 100) / 100;
+      sOut.value = fmtTime(total());
+      els.total.textContent = fmtTime(RF.getTotalDuration()) + 's';
+      refreshMeta(b, metaEl);
+      RFEngine.emitChange();
+    });
+    speedField.append(sLbl, speed);
+
+    frag.append(row1, speedField);
+    return frag;
+  }
+
+  /** everything else lives behind one Advanced disclosure */
+  function editorAdvanced(b, i, metaEl) {
+    const more = document.createElement('details');
+    more.className = 'beat-more';
+    if (advOpenIds.has(b.id)) more.open = true;
+    more.addEventListener('toggle', () => {
+      if (more.open) advOpenIds.add(b.id); else advOpenIds.delete(b.id);
+    });
+    const sum = document.createElement('summary');
+    sum.textContent = 'Advanced — exact timings, camera & motion';
+    more.appendChild(sum);
+
+    // exact timings
+    const row2 = document.createElement('div');
+    row2.className = 'beat-row';
+    row2.append(
+      timeInput('Camera travel', b, 'moveDur', 0, metaEl),
+      timeInput('Highlight speed', b, 'fxDur', 0.05, metaEl),
+      timeInput('Pause after', b, 'hold', 0, metaEl)
+    );
+
+    // track words
+    const tRow = document.createElement('label');
+    tRow.className = 'check'; tRow.style.fontSize = '12px';
+    const track = document.createElement('input');
+    track.type = 'checkbox'; track.checked = !!b.track;
+    track.addEventListener('change', () => { b.track = track.checked; RFEngine.invalidateBeat(b.id); RFEngine.emitChange(); });
+    tRow.append(track, document.createTextNode(' Track words — the camera follows the highlight as it draws, then eases back out'));
+
+    // zoom + reset
+    const zRow = document.createElement('div');
+    zRow.className = 'beat-row';
+    zRow.innerHTML = '<span class="lbl">Zoom</span>';
+    const zoom = document.createElement('input');
+    zoom.type = 'range'; zoom.min = '0.45'; zoom.max = '2.2'; zoom.step = '0.05'; zoom.value = b.zoom;
+    zoom.addEventListener('input', () => { b.zoom = parseFloat(zoom.value); RFEngine.invalidateBeat(b.id); RFEngine.emitChange(); });
+    const zReset = document.createElement('button');
+    zReset.className = 'mini'; zReset.textContent = 'auto'; zReset.title = 'Reset zoom & nudge';
+    zReset.addEventListener('click', () => { b.zoom = 1; b.offsetX = 0; b.offsetY = 0; zoom.value = 1; renderList(); RFEngine.invalidateBeat(b.id); RFEngine.emitChange(); });
+    zRow.append(zoom, zReset);
+
+    // frame nudge
+    const oRow = document.createElement('div');
+    oRow.className = 'beat-row';
+    oRow.innerHTML = '<span class="lbl">Nudge</span>';
+    oRow.append(nudgeInput(b, 'offsetX', '↔'), nudgeInput(b, 'offsetY', '↕'));
+
+    // easings, in plain English
+    const eRow = document.createElement('div');
+    eRow.className = 'beat-row';
+    eRow.append(easeSelect('Camera motion', b, 'camEase'), easeSelect('Highlight motion', b, 'fxEase'));
+
+    // bold
+    const bRow = document.createElement('label');
+    bRow.className = 'check'; bRow.style.fontSize = '12px';
+    const bold = document.createElement('input');
+    bold.type = 'checkbox'; bold.checked = !!b.bold;
+    bold.addEventListener('change', () => { b.bold = bold.checked; RFEngine.emitChange(); });
+    bRow.append(bold, document.createTextNode(' Bold the text (color pop / reveal styles)'));
+    bRow.style.marginBottom = '8px';
+
+    more.append(row2, tRow, zRow, oRow, eRow, bRow);
+    return more;
+  }
+
+  function refreshMeta(b, metaEl) {
+    if (!metaEl) return;
+    const m = RFHighlights.EFFECTS[b.effect];
+    metaEl.textContent = '· ' + ((m && m.label) || b.effect) + ' · ' + fmtTime(b.moveDur + b.fxDur + b.hold) + 's';
+  }
+
+  function timeInput(label, b, prop, min, metaEl) {
     const wrap = document.createElement('span');
     wrap.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:1px;min-width:0';
     const l = document.createElement('span');
-    l.className = 'lbl'; l.textContent = label + ' s';
+    l.className = 'lbl'; l.textContent = label + ' (s)';
     const inp = document.createElement('input');
     inp.type = 'number'; inp.className = 'bt';
     inp.min = min; inp.max = 30; inp.step = 0.1; inp.value = b[prop];
@@ -289,6 +388,7 @@
       b[prop] = Math.max(min, parseFloat(inp.value) || min);
       inp.value = b[prop];
       els.total.textContent = fmtTime(RF.getTotalDuration()) + 's';
+      refreshMeta(b, metaEl);
       RFEngine.emitChange();
     });
     wrap.append(l, inp);
@@ -309,11 +409,11 @@
   function easeSelect(label, b, prop) {
     const wrap = document.createElement('span');
     wrap.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:1px;min-width:0';
-    const l = document.createElement('span'); l.className = 'lbl'; l.textContent = label + ' ease';
+    const l = document.createElement('span'); l.className = 'lbl'; l.textContent = label;
     const sel = document.createElement('select');
     for (const name of RFEngine.EASING_NAMES) {
       const o = document.createElement('option');
-      o.value = name; o.textContent = name;
+      o.value = name; o.textContent = EASE_LABELS[name] || name;
       if (name === b[prop]) o.selected = true;
       sel.appendChild(o);
     }

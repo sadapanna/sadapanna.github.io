@@ -58,177 +58,219 @@
       <span class="tagline">highlight videos from text</span>
     </header>
 
-    <nav id="tabs">
-      <button data-tab="document" class="active">Document</button>
-      <button data-tab="beats">Beats</button>
-      <button data-tab="overlays">Overlays</button>
-      <button data-tab="export">Export</button>
+    <!-- numbered step flow: navigation, not gates — every step is always clickable -->
+    <nav id="stepper" aria-label="Steps">
+      <button data-step="0" class="active"><span class="st-num">1</span><span class="st-lbl">Text</span></button>
+      <button data-step="1"><span class="st-num">2</span><span class="st-lbl">Style</span></button>
+      <button data-step="2"><span class="st-num">3</span><span class="st-lbl">Beats</span></button>
+      <button data-step="3"><span class="st-num">4</span><span class="st-lbl">Export</span></button>
     </nav>
 
-    <!-- ---------- Document tab ---------- -->
-    <section class="tab" id="tab-document">
+    <!-- ---------- ① Text ---------- -->
+    <section class="step" id="step-text">
+      <p class="step-hint"><b>Step 1.</b> Paste the words you want on screen — or try an example to play around first.</p>
+
       <label class="field">
         <span>Your text</span>
-        <textarea id="doc-text" rows="8" spellcheck="false" placeholder="Paste an article, quote, tweet or script excerpt…"></textarea>
+        <textarea id="doc-text" rows="9" spellcheck="false" placeholder="Paste an article, quote, tweet or script excerpt…"></textarea>
       </label>
+      <button id="btn-example" class="ghost">✨ Try an example</button>
+
+      <label class="field" id="author-field" hidden>
+        <span>Author line <span class="dim">(shown under the quote)</span></span>
+        <input id="doc-author" type="text" placeholder="— Jane Doe, The Daily">
+      </label>
+
+      <div class="step-nav">
+        <span></span>
+        <button class="primary" data-go="1">Next: Style →</button>
+      </div>
+    </section>
+
+    <!-- ---------- ② Style ---------- -->
+    <section class="step" id="step-style" hidden>
+      <p class="step-hint"><b>Step 2.</b> Pick how the page looks. The defaults are solid — fine-tune under Advanced if you like.</p>
 
       <div class="field">
         <span>Page theme</span>
         <div id="theme-grid"></div>
       </div>
 
-      <label class="field" id="author-field" hidden>
-        <span>Author line</span>
-        <input id="doc-author" type="text" placeholder="— Jane Doe, The Daily">
+      <div class="field" id="font-field">
+        <span>Font</span>
+        <div id="font-picker">
+          <button type="button" id="font-trigger" aria-haspopup="listbox" aria-expanded="false">
+            <span id="font-current">Poppins</span><span class="fp-caret">▾</span>
+          </button>
+          <div id="font-menu" hidden>
+            <input type="text" id="font-search" placeholder="Search fonts…" autocomplete="off" spellcheck="false">
+            <div id="font-list" role="listbox"></div>
+            <p id="font-empty" class="fp-empty" hidden>No font matches.</p>
+          </div>
+        </div>
+        <p id="font-note" class="fp-note" hidden></p>
+      </div>
+
+      <label class="field"><span>Text size <output id="out-fontsize">30</output>px</span>
+        <input id="doc-fontsize" type="range" min="16" max="64" value="30">
       </label>
 
-      <div class="row2">
-        <label class="field"><span>Font</span>
-          <select id="doc-font">
-            <option value="Poppins">Poppins (sans)</option>
-            <option value="Georgia, 'Times New Roman', serif">Georgia (serif)</option>
-            <option value="ui-monospace, Menlo, Consolas, monospace">Monospace</option>
-            <option value="Pacifico">Pacifico (handwriting)</option>
-          </select>
-        </label>
-        <label class="field"><span>Size <output id="out-fontsize">30</output>px</span>
-          <input id="doc-fontsize" type="range" min="16" max="64" value="30">
-        </label>
-      </div>
-      <div class="row2">
-        <label class="field"><span>Line height <output id="out-lineheight">1.65</output></span>
-          <input id="doc-lineheight" type="range" min="1.1" max="2.4" step="0.05" value="1.65">
-        </label>
-        <label class="field"><span>Para gap <output id="out-paragap">0.8</output>em</span>
-          <input id="doc-paragap" type="range" min="0" max="2.5" step="0.1" value="0.8">
-        </label>
-      </div>
-      <div class="row2">
+      <details class="group">
+        <summary>Advanced — colors &amp; spacing</summary>
+        <div class="row2">
+          <label class="field"><span>Line spacing <output id="out-lineheight">1.65</output></span>
+            <input id="doc-lineheight" type="range" min="1.1" max="2.4" step="0.05" value="1.65">
+          </label>
+          <label class="field"><span>Paragraph spacing <output id="out-paragap">0.8</output>em</span>
+            <input id="doc-paragap" type="range" min="0" max="2.5" step="0.1" value="0.8">
+          </label>
+        </div>
         <label class="field"><span>Column width <output id="out-maxwidth">760</output>px</span>
           <input id="doc-maxwidth" type="range" min="420" max="1400" step="20" value="760">
         </label>
-        <label class="field"><span>Text color</span>
-          <span class="colorwrap"><input id="doc-textcolor" type="color" value="#1c1c28">
-          <button id="doc-textcolor-reset" class="mini" title="Use theme default">auto</button></span>
-        </label>
+        <div class="row2">
+          <label class="field"><span>Text color</span>
+            <span class="colorwrap"><input id="doc-textcolor" type="color" value="#1c1c28">
+            <button id="doc-textcolor-reset" class="mini" title="Use theme default">auto</button></span>
+          </label>
+          <label class="field"><span>Backdrop</span>
+            <span class="colorwrap"><input id="flt-bg" type="color" value="#e9e9f2">
+            <button id="flt-bg-reset" class="mini" title="Theme default">auto</button></span>
+          </label>
+        </div>
+        <label class="check"><input id="flt-bggrad" type="checkbox"> Soft gradient behind the page</label>
+        <label class="check"><input id="flt-shadow" type="checkbox" checked> Page drop shadow</label>
+      </details>
+
+      <div class="step-nav">
+        <button class="ghost" data-go="0">← Back</button>
+        <button class="primary" data-go="2">Next: Beats →</button>
       </div>
-      <p class="tip">Next: switch to the <b>Beats</b> tab and drag across the page to select a phrase.</p>
     </section>
 
-    <!-- ---------- Beats tab ---------- -->
-    <section class="tab" id="tab-beats" hidden>
+    <!-- ---------- ③ Beats ---------- -->
+    <section class="step" id="step-beats" hidden>
+      <p class="step-hint"><b>Step 3.</b> Drag across the page to select a phrase, then add a beat — each beat is one highlight + camera move.</p>
+
       <div id="selection-bar">
-        <span id="selection-info">Drag across the page to select text</span>
-        <button id="add-beat" class="primary" disabled>+ Add Beat</button>
+        <span id="selection-info">Drag on the page → to select</span>
+        <button id="add-beat" class="primary" disabled>+ Add beat</button>
       </div>
 
       <div class="field">
-        <span>Beats <span id="beat-count" class="dim"></span></span>
-        <div id="beat-list"><p class="empty-note">No beats yet. Select a phrase on the page, then “Add Beat”.</p></div>
+        <span>Your beats <span id="beat-count" class="dim"></span> <span class="dim" style="float:right">Video length: <b id="total-duration">0.0s</b></span></span>
+        <div id="beat-list"></div>
       </div>
+
+      <details class="group">
+        <summary>Sync timing to your voice</summary>
+        <div class="field">
+          <span>Play your narration out loud and tap <b>Space</b> each time a highlight should land.</span>
+          <button id="tapsync-toggle" class="ghost">🎙 Start tap-sync</button>
+          <div id="tapsync-status" hidden></div>
+        </div>
+        <div class="row2">
+          <label class="field"><span>Make the whole video last (s)</span><input id="fit-seconds" type="number" min="1" step="0.5" placeholder="30"></label>
+          <button id="fit-apply" class="ghost">Fit</button>
+        </div>
+      </details>
 
       <details class="group">
         <summary>Defaults for new beats</summary>
         <div class="row2">
-          <label class="field"><span>Effect</span><select id="def-effect"></select></label>
+          <label class="field"><span>Highlight style</span><select id="def-effect"></select></label>
           <label class="field"><span>Color</span><input id="def-color" type="color" value="#ffdf3d"></label>
         </div>
-        <div class="row3">
-          <label class="field"><span>Move-in s</span><input id="def-move" type="number" min="0" max="10" step="0.1" value="0.9"></label>
-          <label class="field"><span>Highlight s</span><input id="def-fx" type="number" min="0.05" max="10" step="0.1" value="0.8"></label>
-          <label class="field"><span>Hold s</span><input id="def-hold" type="number" min="0" max="20" step="0.1" value="1.6"></label>
-        </div>
-        <label class="check"><input id="def-track" type="checkbox"> Track words — camera follows the highlight, then eases back out</label>
+        <label class="field"><span>Speed — seconds per beat <output id="out-defspeed">3.3</output>s</span>
+          <input id="def-speed" type="range" min="1" max="10" step="0.1" value="3.3">
+        </label>
+        <details class="sub">
+          <summary>Advanced timing</summary>
+          <div class="row3">
+            <label class="field"><span>Camera travel s</span><input id="def-move" type="number" min="0" max="10" step="0.1" value="0.9"></label>
+            <label class="field"><span>Highlight speed s</span><input id="def-fx" type="number" min="0.05" max="10" step="0.1" value="0.8"></label>
+            <label class="field"><span>Pause after s</span><input id="def-hold" type="number" min="0" max="20" step="0.1" value="1.6"></label>
+          </div>
+          <label class="check"><input id="def-track" type="checkbox"> Track words — the camera follows the highlight as it draws, then eases back out</label>
+        </details>
       </details>
 
       <details class="group">
         <summary>Camera</summary>
-        <label class="check"><input id="cam-establishing" type="checkbox" checked> Establishing shot (full page first)</label>
-        <label class="field" id="estholdfield"><span>Establishing hold <output id="out-esthold">1.5</output>s</span>
+        <label class="check"><input id="cam-establishing" type="checkbox" checked> Start with a full-page view</label>
+        <label class="field" id="estholdfield"><span>Full-page view lasts <output id="out-esthold">1.5</output>s</span>
           <input id="cam-esthold" type="range" min="0.3" max="6" step="0.1" value="1.5"></label>
-        <label class="check"><input id="cam-drift" type="checkbox" checked> Handheld drift during holds</label>
+        <label class="check"><input id="cam-drift" type="checkbox" checked> Subtle handheld drift</label>
         <label class="field"><span>Drift amount <output id="out-drift">5</output></span>
           <input id="cam-driftamt" type="range" min="1" max="14" step="1" value="5"></label>
       </details>
 
       <details class="group">
-        <summary>Timing tools</summary>
-        <div class="row2">
-          <label class="field"><span>Fit to (seconds)</span><input id="fit-seconds" type="number" min="1" step="0.5" placeholder="30"></label>
-          <button id="fit-apply" class="ghost">Fit</button>
-        </div>
+        <summary>Stickers &amp; overlays</summary>
         <div class="field">
-          <span>Tap-sync — play your narration out loud, tap <b>Space</b> when each highlight should land.</span>
-          <button id="tapsync-toggle" class="ghost">Start tap-sync</button>
-          <div id="tapsync-status" hidden></div>
+          <span>Pick a type, then click the page to place it</span>
+          <div id="overlay-add-row">
+            <button class="ov-add ghost" data-ovtype="arrow">→ Arrow</button>
+            <button class="ov-add ghost" data-ovtype="circle">◯ Circle</button>
+            <button class="ov-add ghost" data-ovtype="emoji">😀 Emoji</button>
+            <button class="ov-add ghost" data-ovtype="label">Aa Label</button>
+            <button class="ov-add ghost" data-ovtype="image">🖼 Image</button>
+            <input id="overlay-image-input" type="file" accept="image/*" hidden>
+          </div>
+          <div id="overlay-place-hint" hidden>Click the page to place — <button id="overlay-place-cancel" class="mini">cancel</button></div>
         </div>
+        <div id="overlay-list"><p class="empty-note">No overlays yet.</p></div>
       </details>
 
-      <p class="tip">Total: <b id="total-duration">0.0s</b></p>
-    </section>
-
-    <!-- ---------- Overlays tab ---------- -->
-    <section class="tab" id="tab-overlays" hidden>
-      <div class="field">
-        <span>Add overlay — pick a type, then click the page to place it</span>
-        <div id="overlay-add-row">
-          <button class="ov-add ghost" data-ovtype="arrow">→ Arrow</button>
-          <button class="ov-add ghost" data-ovtype="circle">◯ Circle</button>
-          <button class="ov-add ghost" data-ovtype="emoji">😀 Emoji</button>
-          <button class="ov-add ghost" data-ovtype="label">Aa Label</button>
-          <button class="ov-add ghost" data-ovtype="image">🖼 Image</button>
-          <input id="overlay-image-input" type="file" accept="image/*" hidden>
-        </div>
-        <div id="overlay-place-hint" hidden>Click the page to place — <button id="overlay-place-cancel" class="mini">cancel</button></div>
-      </div>
-      <div id="overlay-list"><p class="empty-note">No overlays yet.</p></div>
-
-      <details class="group" open>
-        <summary>Page &amp; filters</summary>
-        <label class="check"><input id="flt-vignette" type="checkbox"> Vignette</label>
+      <details class="group">
+        <summary>Cinematic filters</summary>
+        <label class="check"><input id="flt-vignette" type="checkbox"> Vignette (darkened corners)</label>
         <label class="check"><input id="flt-grain" type="checkbox"> Film grain</label>
-        <label class="check"><input id="flt-shadow" type="checkbox" checked> Page shadow</label>
-        <label class="check"><input id="flt-progress" type="checkbox"> Progress bar</label>
-        <div class="row2">
-          <label class="field"><span>Backdrop</span>
-            <span class="colorwrap"><input id="flt-bg" type="color" value="#e9e9f2">
-            <button id="flt-bg-reset" class="mini" title="Theme default">auto</button></span>
-          </label>
-          <label class="check"><input id="flt-bggrad" type="checkbox"> Soft gradient</label>
-        </div>
+        <label class="check"><input id="flt-progress" type="checkbox"> Progress bar along the bottom</label>
       </details>
+
+      <div class="step-nav">
+        <button class="ghost" data-go="1">← Back</button>
+        <button class="primary" data-go="3">Next: Export →</button>
+      </div>
     </section>
 
-    <!-- ---------- Export tab ---------- -->
-    <section class="tab" id="tab-export" hidden>
+    <!-- ---------- ④ Export ---------- -->
+    <section class="step" id="step-export" hidden>
+      <p class="step-hint"><b>Step 4.</b> Pick a size and hit export — everything renders right in your browser, nothing is uploaded.</p>
+
       <div class="field">
-        <span>Frame</span>
+        <span>Video size</span>
         <div id="frame-presets">
-          <button data-preset="landscape" class="active">16:9<small>1920×1080</small></button>
-          <button data-preset="portrait">9:16<small>1080×1920</small></button>
-          <button data-preset="square">1:1<small>1080×1080</small></button>
+          <button data-preset="landscape" class="active">16:9<small>YouTube</small></button>
+          <button data-preset="portrait">9:16<small>Shorts / Reels</small></button>
+          <button data-preset="square">1:1<small>Square</small></button>
         </div>
-      </div>
-      <div class="row2">
-        <label class="field"><span>FPS</span>
-          <select id="frame-fps"><option value="30">30</option><option value="60">60</option></select>
-        </label>
-        <label class="check"><input id="safe-guides" type="checkbox"> Safe-area guides</label>
       </div>
 
       <div class="field">
-        <span>Export</span>
+        <span>Download as</span>
         <div class="btn-grid">
-          <button id="export-mp4" class="primary">MP4</button>
-          <button id="export-webm">WebM</button>
+          <button id="export-mp4" class="primary">🎬 MP4 video</button>
+          <button id="export-webm">WebM video</button>
           <button id="export-gif">GIF</button>
-          <button id="export-png">PNG frame</button>
+          <button id="export-png">PNG still</button>
         </div>
         <div id="export-progress" role="status" aria-live="polite" hidden></div>
       </div>
 
+      <details class="group">
+        <summary>Advanced</summary>
+        <div class="row2">
+          <label class="field"><span>Smoothness (FPS)</span>
+            <select id="frame-fps"><option value="30">30 fps</option><option value="60">60 fps</option></select>
+          </label>
+          <label class="check"><input id="safe-guides" type="checkbox"> Safe-area guides</label>
+        </div>
+      </details>
+
       <details class="group" open>
-        <summary>Project</summary>
+        <summary>Save &amp; reopen projects</summary>
         <div class="row2">
           <input id="project-name" type="text" value="Untitled" spellcheck="false" aria-label="Project name">
           <button id="project-save" class="ghost">Save</button>
@@ -240,7 +282,11 @@
           <button id="project-import-json" class="ghost">Import JSON</button>
         </div>
       </details>
-      <p class="tip">Everything renders and exports in your browser — nothing is uploaded.</p>
+
+      <div class="step-nav">
+        <button class="ghost" data-go="2">← Back</button>
+        <span></span>
+      </div>
     </section>
   </aside>
 
@@ -262,6 +308,7 @@
 <script src="vendor/mp4-muxer.min.js"></script>
 <script src="vendor/gif.js"></script>
 
+<script src="js/fonts.js"></script>
 <script src="js/doc.js"></script>
 <script src="js/camera.js"></script>
 <script src="js/highlights.js"></script>
