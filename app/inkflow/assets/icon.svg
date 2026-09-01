@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f59e0b"/>
+      <stop offset="1" stop-color="#ec4899"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <!-- faint ruled lines -->
+  <g stroke="#ffffff" stroke-opacity="0.12" stroke-width="4">
+    <path d="M64 160H448M64 256H448M64 352H448"/>
+  </g>
+  <!-- flowing ink stroke being written -->
+  <path d="M96 330 C 150 230, 200 230, 224 300 C 244 358, 288 358, 312 300"
+        fill="none" stroke="#ffffff" stroke-width="26" stroke-linecap="round"/>
+  <!-- pen nib at the stroke's end, angled as if writing -->
+  <g transform="translate(322 290) rotate(38)">
+    <path d="M0 0 L52 -104 L104 0 L52 46 Z" fill="#ffffff"/>
+    <path d="M52 -20 L52 -78" stroke="#ec4899" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="52" cy="-6" r="14" fill="#ec4899"/>
+  </g>
+  <!-- ink dot the nib just left -->
+  <circle cx="312" cy="300" r="15" fill="#ffffff"/>
+</svg>

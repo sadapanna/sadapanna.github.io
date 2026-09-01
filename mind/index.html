@@ -26,7 +26,11 @@
 
   <link rel="preload" href="/assets/fonts/madimi-one-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="preload" href="/assets/fonts/poppins-400.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="/styles.css?v=12" />
+  <link rel="stylesheet" href="/styles.css?v=13" />
+  <style>
+    /* Demo-clip thumbs on product cards; scoped here to leave the shared stylesheet's cache alone. */
+    .post-thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  </style>
   <link rel="icon" href="/assets/brand/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" sizes="96x96" href="/assets/brand/favicon-96.png" />
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/brand/favicon-32.png" />
@@ -62,9 +66,9 @@
       </a>
       <nav class="site-nav">
         <a class="nav-pill" href="/#projects">Projects</a>
-        <a class="nav-pill" href="/mind/">Mind</a>
+        <a class="nav-pill" href="/yt/">For YouTubers</a>
+        <a class="nav-pill is-active" href="/mind/" aria-current="page">Mind</a>
         <a class="nav-pill" href="/#about">About</a>
-        <a class="nav-pill" href="/#contact">Contact</a>
       </nav>
       <a class="btn btn-outline header-cta" href="mailto:hello@sadapanna.com">Say hello <span
           class="btn-arrow">↗</span></a>
@@ -86,7 +90,7 @@
         <div class="post-list">
           <!-- POSTS:START -->
           <a class="post-card" href="/mind/introducing-chartflow/">
-            <span class="post-thumb">📊</span>
+            <span class="post-thumb"><video autoplay muted loop playsinline preload="metadata" poster="/mind/introducing-chartflow/poster.jpg" aria-label="A bar chart race made in ChartFlow"><source src="/mind/introducing-chartflow/demo.webm" type="video/webm" /><source src="/mind/introducing-chartflow/demo.mp4" type="video/mp4" /></video></span>
             <div class="post-card-body">
               <div class="post-meta"><span class="post-tag">Product</span><time class="post-date" datetime="2026-09-01T15:00:00+05:30" data-ts="2026-09-01T15:00:00+05:30">September 1, 2026</time><span>·</span><span>6 min read</span></div>
               <h2>Meet <em>ChartFlow</em> — the stat clip, without the motion-graphics app</h2>
@@ -94,7 +98,7 @@
             </div>
           </a>
           <a class="post-card" href="/mind/introducing-readflow/">
-            <span class="post-thumb">🔦</span>
+            <span class="post-thumb"><video autoplay muted loop playsinline preload="metadata" poster="/mind/introducing-readflow/poster.jpg" aria-label="A paragraph with phrases lighting up, made in ReadFlow"><source src="/mind/introducing-readflow/demo.webm" type="video/webm" /><source src="/mind/introducing-readflow/demo.mp4" type="video/mp4" /></video></span>
             <div class="post-card-body">
               <div class="post-meta"><span class="post-tag">Product</span><time class="post-date" datetime="2026-09-01T10:00:00+05:30" data-ts="2026-09-01T10:00:00+05:30">September 1, 2026</time><span>·</span><span>6 min read</span></div>
               <h2>Meet <em>ReadFlow</em> — the article video, without the keyframe grind</h2>
@@ -134,7 +138,7 @@
             </div>
           </a>
           <a class="post-card" href="/mind/introducing-inkflow/">
-            <span class="post-thumb">✍️</span>
+            <span class="post-thumb"><video autoplay muted loop playsinline preload="metadata" poster="/mind/introducing-inkflow/poster.jpg" aria-label="Handwriting animating letter by letter, made in InkFlow"><source src="/mind/introducing-inkflow/demo.webm" type="video/webm" /><source src="/mind/introducing-inkflow/demo.mp4" type="video/mp4" /></video></span>
             <div class="post-card-body">
               <div class="post-meta"><span class="post-tag">Product</span><span>July 21, 2026</span><span>·</span><span>4 min read</span></div>
               <h2>Meet <em>InkFlow</em> — turn any font into an animated write-on</h2>

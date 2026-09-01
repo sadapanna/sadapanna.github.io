@@ -271,24 +271,30 @@ a {
 
 .site-nav {
   display: flex;
-  gap: 10px;
+  gap: 4px;
   flex-wrap: wrap;
 }
 
+/* Quiet text links: the outlined "Say hello" CTA is the only bordered element
+   in the header, so the eye lands there instead of a row of capsules. */
 .nav-pill {
-  padding: 8px 18px;
-  border: 1.5px solid #e5e1f2;
+  padding: 8px 14px;
   border-radius: var(--radius-pill);
   color: var(--ink-soft);
   font-size: 0.9rem;
   font-weight: 500;
-  transition: border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
+  transition: color 0.18s ease, background 0.18s ease;
 }
 
 .nav-pill:hover {
-  border-color: var(--purple);
   color: var(--purple);
   background: var(--lavender-soft);
+}
+
+.nav-pill.is-active {
+  color: var(--purple);
+  background: var(--lavender-soft);
+  font-weight: 600;
 }
 
 /* ---------- Hero ---------- */
