@@ -1797,6 +1797,185 @@ a {
   background: var(--yellow-soft);
 }
 
+/* ---------- Parda teaser (home) ---------- */
+.parda-tease {
+  margin: 44px 0 0;
+  background: var(--ink);
+  color: var(--white);
+  border-radius: var(--radius-lg);
+  padding: clamp(30px, 5vw, 48px);
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: clamp(26px, 4vw, 48px);
+  align-items: center;
+  overflow: hidden;
+}
+
+.parda-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--yellow);
+  margin-bottom: 14px;
+}
+
+.parda-tease h3 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0 0 12px;
+}
+
+.parda-tease h3 em,
+.parda-note em {
+  font-family: var(--hand);
+  font-style: normal;
+  font-weight: 700;
+  color: var(--yellow);
+}
+
+.parda-tease h3 em {
+  font-size: 1.3em;
+}
+
+.parda-tease p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.98rem;
+  max-width: 32em;
+  margin: 0 0 24px;
+}
+
+.parda-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 20px;
+}
+
+.parda-tease .btn-primary {
+  background: var(--yellow);
+  color: var(--ink);
+}
+
+.parda-tease .btn-primary .btn-arrow {
+  background: rgba(29, 27, 38, 0.14);
+}
+
+.parda-tease .btn-primary:hover {
+  background: var(--yellow-soft);
+}
+
+.parda-note {
+  font-family: var(--hand);
+  font-size: 1.3rem;
+  color: rgba(255, 255, 255, 0.6);
+  transform: rotate(-3deg);
+}
+
+/* the little stage: light behind, two velvet panels in front */
+.parda-stage {
+  position: relative;
+  height: 220px;
+  border-radius: 22px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 45% 70% at 50% 60%, rgba(255, 199, 54, 0.55), transparent 70%),
+    #2a2637;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.parda-behind {
+  font-family: var(--hand);
+  font-weight: 700;
+  font-size: 2.4rem;
+  color: var(--yellow);
+}
+
+.parda-curtain {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 48.5%;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.25)),
+    repeating-linear-gradient(90deg,
+      var(--purple-deep) 0 9px,
+      var(--purple) 9px 17px,
+      #4529c4 17px 24px);
+  transition: transform 0.9s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.parda-curtain-l {
+  left: 0;
+  transform-origin: left top;
+  box-shadow: inset -10px 0 14px rgba(0, 0, 0, 0.28);
+  animation: parda-peek-l 5s ease-in-out infinite;
+}
+
+.parda-curtain-r {
+  right: 0;
+  transform-origin: right top;
+  box-shadow: inset 10px 0 14px rgba(0, 0, 0, 0.28);
+  animation: parda-peek-r 5s ease-in-out infinite;
+}
+
+.parda-valance {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 26px;
+  background:
+    radial-gradient(circle at 50% 0, var(--yellow) 0 13px, transparent 14px) 0 0 / 28px 26px repeat-x;
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.3));
+}
+
+@keyframes parda-peek-l {
+  0%, 60%, 100% { transform: translateX(0); }
+  75%, 85% { transform: translateX(-9%); }
+}
+
+@keyframes parda-peek-r {
+  0%, 60%, 100% { transform: translateX(0); }
+  75%, 85% { transform: translateX(9%); }
+}
+
+.parda-tease:hover .parda-curtain,
+.parda-tease:focus-within .parda-curtain {
+  animation: none;
+}
+
+.parda-tease:hover .parda-curtain-l,
+.parda-tease:focus-within .parda-curtain-l {
+  transform: translateX(-62%) scaleX(0.7);
+}
+
+.parda-tease:hover .parda-curtain-r,
+.parda-tease:focus-within .parda-curtain-r {
+  transform: translateX(62%) scaleX(0.7);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .parda-curtain {
+    animation: none;
+    transition: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .parda-tease {
+    grid-template-columns: 1fr;
+  }
+
+  .parda-stage {
+    height: 170px;
+    order: -1;
+  }
+}
+
 /* article footer / share row */
 .article-foot {
   margin-top: 48px;
