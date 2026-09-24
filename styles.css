@@ -1890,10 +1890,19 @@ a {
 }
 
 .parda-behind {
-  font-family: var(--hand);
-  font-weight: 700;
-  font-size: 2.4rem;
-  color: var(--yellow);
+  width: 104px;
+  height: 104px;
+  border-radius: 24px;
+  box-shadow: 0 10px 30px rgba(255, 199, 54, 0.35);
+  opacity: 0.35;
+  transform: scale(0.82);
+  transition: opacity 0.6s ease 0.25s, transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.25s;
+}
+
+.parda-tease:hover .parda-behind,
+.parda-tease:focus-within .parda-behind {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .parda-curtain {
@@ -1907,7 +1916,9 @@ a {
       var(--purple-deep) 0 9px,
       var(--purple) 9px 17px,
       #4529c4 17px 24px);
-  transition: transform 0.9s cubic-bezier(0.65, 0, 0.35, 1);
+  /* idle peek animates `translate`, the open state transitions `transform` —
+     separate properties, so hovering never snaps */
+  transition: transform 1.1s cubic-bezier(0.65, 0, 0.35, 1);
 }
 
 .parda-curtain-l {
@@ -1934,18 +1945,18 @@ a {
 }
 
 @keyframes parda-peek-l {
-  0%, 60%, 100% { transform: translateX(0); }
-  75%, 85% { transform: translateX(-9%); }
+  0%, 60%, 100% { translate: 0 0; }
+  75%, 85% { translate: -9% 0; }
 }
 
 @keyframes parda-peek-r {
-  0%, 60%, 100% { transform: translateX(0); }
-  75%, 85% { transform: translateX(9%); }
+  0%, 60%, 100% { translate: 0 0; }
+  75%, 85% { translate: 9% 0; }
 }
 
 .parda-tease:hover .parda-curtain,
 .parda-tease:focus-within .parda-curtain {
-  animation: none;
+  animation-play-state: paused;
 }
 
 .parda-tease:hover .parda-curtain-l,
@@ -1959,7 +1970,8 @@ a {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .parda-curtain {
+  .parda-curtain,
+  .parda-behind {
     animation: none;
     transition: none;
   }

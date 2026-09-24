@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 108 108">
+  <!-- Parda app icon: a curtain pulled open on a private contact. -->
+  <rect width="108" height="108" fill="#3B2F8F"/>
+  <g transform="translate(54 54) scale(0.8) translate(-54 -54)">
+    <path d="M20 20 H52 C50 50 38 70 20 88 Z" fill="#FFFFFF"/>
+    <path d="M88 20 H56 C58 50 70 70 88 88 Z" fill="#FFFFFF"/>
+    <circle cx="54" cy="72" r="10" fill="#3DDC97"/>
+  </g>
+</svg>
