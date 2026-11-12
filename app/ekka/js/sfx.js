@@ -61,6 +61,11 @@
     lose() { [392, 349, 294, 262].forEach((f, i) => tone(f, i * 0.16, 0.3, 'triangle', 0.11)); },
     nope() { tone(160, 0, 0.14, 'square', 0.06); },
     join() { tone(587, 0, 0.1, 'sine', 0.1); tone(880, 0.09, 0.16, 'sine', 0.1); },
+    tick() { tone(1200, 0, 0.05, 'square', 0.05); },
+    pop() { tone(500, 0, 0.09, 'sine', 0.12, 980); },
+    lift() { noise(0, 0.04, 0.08, 3000); },
+    out() { tone(260, 0, 0.2, 'sawtooth', 0.12, 110); tone(110, 0.2, 0.4, 'sawtooth', 0.12, 55); noise(0.2, 0.25, 0.2, 500); },
+    time() { [880, 880, 880].forEach((f, i) => tone(f, i * 0.2, 0.14, 'square', 0.09)); tone(440, 0.6, 0.5, 'square', 0.1, 220); },
   };
 
   root.EkkaSfx = {

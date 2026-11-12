@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meet Ekka — a free multiplayer card game you play from your own phones · Sadapanna Mind</title>
+  <meta name="description" content="Ekka is a free card game for 2 to 8 players, in the browser. Share a four-letter code and everyone plays from their own phone. If you've played UNO, you know how." />
+  <link rel="canonical" href="https://sadapanna.com/mind/introducing-ekka/" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <meta name="theme-color" content="#ffffff" />
+
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Sadapanna" />
+  <meta property="og:title" content="Meet Ekka — a free multiplayer card game you play from your own phones" />
+  <meta property="og:description" content="A colour-and-number card game for 2 to 8 players. Create a room, share the four-letter code, and every phone becomes a private hand. Free, no app, no sign-up, no ads." />
+  <meta property="og:url" content="https://sadapanna.com/mind/introducing-ekka/" />
+  <meta property="og:image" content="https://sadapanna.com/mind/introducing-ekka/og.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Ekka, a free multiplayer card game in the browser" />
+  <meta property="article:published_time" content="2026-11-12" />
+  <meta property="article:author" content="Sadapanna" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://sadapanna.com/mind/introducing-ekka/og.png" />
+  <meta name="twitter:image:alt" content="Ekka, a free multiplayer card game in the browser" />
+  <meta name="twitter:title" content="Meet Ekka — a free multiplayer card game you play from your own phones" />
+  <meta name="twitter:description" content="One room code, two to eight players, every hand private on its own screen. Free in the browser, no app, no sign-up, no ads." />
+
+  <link rel="preload" href="/assets/fonts/madimi-one-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/assets/fonts/poppins-400.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="/styles.css?v=13" />
+  <link rel="icon" href="/assets/brand/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="96x96" href="/assets/brand/favicon-96.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/brand/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/brand/favicon-16.png" />
+  <link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png" />
+
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Meet Ekka — a free multiplayer card game you play from your own phones",
+  "description": "Ekka is a free colour-and-number card game for 2 to 8 players, played in the browser. Create a room, share the four-letter code, and every phone becomes a private hand. No app, no sign-up, no ads.",
+  "image": "https://sadapanna.com/mind/introducing-ekka/og.png",
+  "datePublished": "2026-11-12",
+  "dateModified": "2026-11-12",
+  "author": {
+    "@type": "Organization",
+    "name": "The Sadapanna team",
+    "url": "https://sadapanna.com/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Sadapanna",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://sadapanna.com/assets/brand/logo-white.png"
+    }
+  },
+  "isPartOf": {
+    "@type": "Blog",
+    "name": "Sadapanna Mind",
+    "url": "https://sadapanna.com/mind/"
+  },
+  "about": {
+    "@type": "VideoGame",
+    "name": "Ekka",
+    "url": "https://sadapanna.com/app/ekka/"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://sadapanna.com/mind/introducing-ekka/"
+  }
+}
+  </script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Is Ekka free, and do I need to install an app?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Ekka is free, with no ads and no account. It runs in the browser at sadapanna.com/app/ekka/, so there is nothing to install."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How many people can play?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Two to eight. The host can add computer players to fill empty seats, and there is a Play the computer mode if you are on your own."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do we all need to be on the same wifi?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No, but that is when it is most reliable. It often works across different networks too. Some mobile networks block direct connections between devices, and then a player may not be able to join."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Are there different game modes?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Three, and the host picks one before the game starts. Classic is open-ended with a running scoreboard. Timed is a 5, 10 or 15 minute match where the highest total wins. Ruthless makes draw cards stack, adds Wild +6 and Hop all, and knocks out anyone holding 15 cards."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does it work on iPhone?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Ekka runs in modern mobile browsers, including Safari."
+      }
+    }
+  ]
+}
+  </script>
+  <script type='module' src='https://static.cloudflareinsights.com/beacon.min.js'
+    data-cf-beacon='{"token": "decf7f7fdb114793be902266b9912861"}'></script>
+
+  <style>
+    /* Screenshots instead of the emoji cover; scoped here to leave the shared stylesheet's cache alone. */
+    .article-figure .figure-frame {
+      aspect-ratio: 16 / 10;
+      font-size: 0;
+    }
+
+    /* the tall phone shot sits centred on the frame's gradient instead of filling the column */
+    .prose .article-figure {
+      margin: 40px 0;
+      font-family: var(--sans);
+    }
+
+    .article-figure.figure-phone .figure-frame {
+      aspect-ratio: auto;
+      padding: 32px 0;
+    }
+
+    .article-figure.figure-phone img {
+      width: min(280px, 68%);
+      border-radius: 26px;
+      box-shadow: 0 18px 40px rgba(29, 27, 38, 0.22);
+    }
+  </style>
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a class="brand" href="/">
+        <img class="brand-icon" src="/assets/brand/icon-192.webp" alt="" width="192" height="186" />
+        <span class="brand-word">Sadapanna</span>
+      </a>
+      <nav class="site-nav">
+        <a class="nav-pill" href="/#projects">Projects</a>
+        <a class="nav-pill" href="/yt/">For YouTubers</a>
+        <a class="nav-pill is-active" href="/mind/" aria-current="page">Mind</a>
+        <a class="nav-pill" href="/#about">About</a>
+      </nav>
+      <a class="btn btn-outline header-cta" href="mailto:hello@sadapanna.com">Say hello <span
+          class="btn-arrow">↗</span></a>
+    </div>
+  </header>
+
+  <main>
+    <article class="container article">
+      <nav class="breadcrumb">
+        <a href="/mind/">Mind</a><span>/</span>Ekka
+      </nav>
+
+      <header class="article-header">
+        <div class="post-meta">
+          <span class="post-tag">Product</span>
+          <span>November 12, 2026</span>
+          <span>·</span><span>6 min read</span>
+        </div>
+        <h1>Meet <em>Ekka</em> — the card game where every phone is a hand</h1>
+        <p class="article-lede">A colour-and-number card game for two to eight players that runs in the browser. One person opens a room, everyone else types a four-letter code, and each phone becomes a private hand of cards. Free, nothing to install, no account, no ads.</p>
+        <div class="byline">
+          <img src="/assets/brand/icon-192.webp" alt="" />
+          <div>
+            <div class="byline-name">The Sadapanna team</div>
+            <div class="byline-sub">Published November 12, 2026</div>
+          </div>
+        </div>
+      </header>
+
+      <figure class="article-figure">
+        <div class="figure-frame"><img src="/mind/introducing-ekka/ekka-table.webp" width="1600" height="1000"
+            alt="The Ekka table in the middle of a round on a laptop: a deck and a pile with a red 9 on top, five other players seated around the rim with their card counts, and your own hand of five cards along the bottom"
+            decoding="async" fetchpriority="high" /></div>
+        <figcaption>A round in progress. The pile, the deck and the turn order are shared. The hand along the bottom is
+          yours alone.</figcaption>
+      </figure>
+
+      <div class="prose">
+<p>Most living rooms know this moment. Someone says "cards?" and the deck comes out of a drawer, a few cards short as
+  always. Or it doesn't come out at all, because it was left at someone's house.</p>
+
+<p>So the phones come out instead, and that goes wrong in a different way. One card app wants everybody to sign up
+  first. Another plays an advert between rounds. A third only works if every person in the room installs the same
+  thing, and by the time the last download finishes the mood has moved on.</p>
+
+<p>We made <a href="/app/ekka/"><strong>Ekka</strong></a> for that moment, and we set ourselves one test: someone who
+  has just heard the room code should be in the game within about a minute. Open a page, type four letters, pick up
+  your cards.</p>
+
+<h2>The rules, in <em>two minutes</em></h2>
+<p>Ekka is a shedding game: the first player to get rid of every card wins the round. If you have played UNO, you
+  already know how to play, because the rules come from the same family.</p>
+
+<p>The standard deck has 108 cards in four colours: red, yellow, green and blue. Each colour also carries its own shape
+  (circle, triangle, square or diamond), so colour-blind players can tell them apart. Most cards are numbers, 0 to 9.
+  On your turn you play one card that matches the top of the pile by colour, or by number or symbol. If nothing fits,
+  you draw one, and if that card fits you may play it.</p>
+
+<p>Then there are the cards that start arguments:</p>
+
+<ul>
+  <li><strong>Hop</strong> skips the next player.</li>
+  <li><strong>Flip</strong> reverses the direction of play.</li>
+  <li><strong>+2</strong> makes the next player draw two.</li>
+  <li><strong>Wild</strong> lets you pick the colour.</li>
+  <li><strong>Wild +4</strong> lets you pick the colour, and the next player draws four.</li>
+</ul>
+
+<p>One rule catches everybody at least once. When you are down to a single card you must hit <strong>Ekka!</strong>.
+  If someone else taps <strong>Catch</strong> first, you draw two.</p>
+
+<p>When a round ends, everyone's leftover cards are turned face up and counted. Numbers score their face value, action
+  cards 20, wilds 50. The winner of the round collects the points.</p>
+
+<h2>Three ways to <em>play</em></h2>
+<p>Before the first card goes down, the host picks a mode in the room.</p>
+
+<div class="feature-grid">
+  <div class="feature">
+    <span class="feature-emoji">♾️</span>
+    <h4>Classic</h4>
+    <p>Open-ended. Play round after round for as long as you like, and the scoreboard keeps a running total. Stacking
+      is an optional house rule here: switch it on and you can answer a +2 or a Wild +4 with one of your own.</p>
+  </div>
+  <div class="feature">
+    <span class="feature-emoji">⏳</span>
+    <h4>Timed</h4>
+    <p>The host picks a 5, 10 or 15 minute match. Win a round and you collect the value of every card the others are
+      still holding. When the clock runs out the round stops where it is, the lightest hand takes that last pot, and
+      the highest total wins the match.</p>
+  </div>
+  <div class="feature">
+    <span class="feature-emoji">🔥</span>
+    <h4>Ruthless</h4>
+    <p>The harsh one. Draw cards always stack. If you cannot play, you keep drawing until you can. The deck gains
+      Wild +6 and Hop all, which skips everyone so you go again. Anyone who ends up holding 15 cards is knocked out of
+      the round.</p>
+  </div>
+</div>
+
+<h2>One room, and every hand stays <em>private</em></h2>
+<p>One person taps <strong>Create a room</strong> and gets a four-letter code, a QR code and an invite link. Everyone
+  else joins from their own phone or laptop.</p>
+
+<p>Your hand is on your screen and nobody else's. The table is shared: the pile, the deck, the turn order, and how
+  many cards each person is holding. If you are short of people, the host can add computer players to fill the seats.
+  There is also a <strong>Play the computer</strong> table for when it is just you.</p>
+
+<figure class="article-figure figure-phone">
+  <div class="figure-frame"><img src="/mind/introducing-ekka/ekka-phone.webp" width="780" height="1560"
+      alt="Ekka on a phone: four other players around the table, the deck and pile in the middle, and your own hand fanned out along the bottom of the screen" loading="lazy"
+      decoding="async" /></div>
+  <figcaption>On a phone: your cards, and the table everyone shares.</figcaption>
+</figure>
+
+<h2>It should feel like <em>cards</em></h2>
+<p>A card game on a screen can end up feeling like a form with buttons. We wanted the opposite. Cards fly from the
+  deck to hands and from hands to the pile. You can tap a card to play it, or flick it onto the pile. Slide a finger along a crowded hand and each card lifts in turn so you can read it. The table is
+  dark, and its rim lights up in the colour in play. There are sound effects, and Hop, Flip, +2 and +4, Wild, the
+  Ekka call, getting caught and winning each have an effect of their own.</p>
+
+<blockquote>
+  <p>A phone makes a good hand of cards. It's private, it's already in your pocket, and nobody has to shuffle.</p>
+</blockquote>
+
+<p>A few smaller things sit around the table:</p>
+
+<ul>
+  <li><strong>Avatars.</strong> Pick one before you sit down.</li>
+  <li><strong>Reactions.</strong> Tap an emoji and it pops up at your seat on everyone's screen.</li>
+  <li><strong>A turn timer.</strong> Each turn gets 30 seconds by default, and if it runs out you draw a card. The
+    host can change the length or switch it off. It is separate from the match clock in Timed mode, which counts
+    the whole match.</li>
+</ul>
+
+<h2>There is no game <em>server</em></h2>
+<p>Sadapanna runs no server for Ekka. The host's browser runs the game, and the other devices connect to it directly
+  using WebRTC, the technology browsers use for video calls. To find each other the devices need an introduction, and
+  for that Ekka uses a public matchmaking service called PeerJS. It matches devices by room code and nothing more.
+  Game data goes from device to device.</p>
+
+<div class="callout">
+  <span class="callout-icon">🔒</span>
+  <p><strong>No accounts, nothing collected.</strong> The only things Ekka saves are your name, your avatar, your
+    sound preference and a random id that lets you take your seat back after a refresh, and it saves them in your
+    own browser. Same rule as everything we make: no data to sell, because
+    we never collect any.</p>
+</div>
+
+<p>We have written before about <a href="/mind/surveillance-pricing/">how companies use the data they hold on you to
+  set prices</a>. Our answer is to hold none.</p>
+
+<h2>The honest <em>limits</em></h2>
+<p>A game without a server has edges, and it is better to know them before game night.</p>
+
+<ul>
+  <li>It is most reliable when everyone is on the same wifi. It often works across different networks too, but some
+    mobile networks block direct connections.</li>
+  <li>The room lives on the host's device. If the host refreshes, the room reopens. If the host closes the tab, the
+    room ends.</li>
+</ul>
+
+<p>The smaller mishaps are covered. If a guest's phone locks or drops off wifi, they rejoin automatically. If a player
+  leaves, a computer player takes over their hand.</p>
+
+<h2>Quick <em>answers</em></h2>
+
+<h3>Is Ekka free, and do I need to install an app?</h3>
+<p>Ekka is free, with no ads and no account. It runs in the browser at
+  <a href="/app/ekka/">sadapanna.com/app/ekka/</a>, so there is nothing to install.</p>
+
+<h3>How many people can play?</h3>
+<p>Two to eight. The host can add computer players to fill empty seats, and there is a Play the computer table if you
+  are on your own.</p>
+
+<h3>Do we all need to be on the same wifi?</h3>
+<p>No, but that is when it is most reliable. It often works across different networks too. Some mobile networks block
+  direct connections between devices, and then a player may not be able to join.</p>
+
+<h3>Are there different game modes?</h3>
+<p>Three, and the host picks one before the game starts. Classic is open-ended with a running scoreboard. Timed is a
+  5, 10 or 15 minute match where the highest total wins. Ruthless makes draw cards stack, adds Wild +6 and Hop all,
+  and knocks out anyone holding 15 cards.</p>
+
+<h3>Does it work on iPhone?</h3>
+<p>Ekka runs in modern mobile browsers, including Safari.</p>
+
+<div class="try-banner">
+  <img src="/app/ekka/assets/icon-192.png" alt="" width="64" height="64" loading="lazy" decoding="async"
+    style="display:block;margin:0 auto 14px;border-radius:16px;" />
+  <h3>Play <em>Ekka</em></h3>
+  <p>Free, no sign-up, no ads. Create a room and share the four letters, or play the computer first to learn the
+    cards.</p>
+  <a class="btn btn-primary" href="/app/ekka/">Open Ekka <span class="btn-arrow">↗</span></a>
+</div>
+
+<p>Ekka is an original game with its own name and artwork. It is not affiliated with or endorsed by Mattel, and UNO is
+  their trademark.</p>
+
+<p>Ekka sits alongside InkFlow, <a href="/mind/introducing-geoflow/">GeoFlow</a>, ReadFlow and ChartFlow as something
+  you can open on this site and use for nothing. If a rule behaves oddly, or your network refuses to connect, we want
+  to hear about it: <a href="mailto:hello@sadapanna.com">hello@sadapanna.com</a>.</p>
+
+      </div>
+
+      <div class="article-foot">
+        <a class="back-link" href="/mind/">← Back to Mind</a>
+        <div class="article-tags"><span class="post-tag">Ekka</span><span class="post-tag">Games</span><span class="post-tag">Multiplayer</span></div>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <span>© 2026 Sadapanna <img class="foot-icon" src="/assets/brand/icon-192.webp" alt="" width="192"
+          height="186" /> made slowly</span>
+      <nav class="footer-links">
+        <a href="/mind/">Mind</a>
+        <a href="/privacy/">Privacy</a>
+        <a href="/terms/">Terms</a>
+        <a href="/backyard/">Backyard</a>
+        <a href="/#contact">Contact</a>
+      </nav>
+    </div>
+  </footer>
+  <script>
+(function () {
+  function rel(iso) {
+    var t = new Date(iso).getTime();
+    if (isNaN(t)) return null;
+    var d = Date.now() - t;
+    if (d < 0) return null;
+    var m = Math.floor(d / 6e4);
+    if (m < 1) return "just now";
+    if (m < 60) return m + " min" + (m === 1 ? "" : "s") + " ago";
+    var h = Math.floor(m / 60);
+    if (h < 24) return h + " hour" + (h === 1 ? "" : "s") + " ago";
+    return null;
+  }
+  document.querySelectorAll(".post-date[data-ts]").forEach(function (el) {
+    var r = rel(el.getAttribute("data-ts"));
+    if (r) el.textContent = r;
+  });
+})();
+</script>
+</body>
+
+</html>

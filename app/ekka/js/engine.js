@@ -3,10 +3,14 @@
 (function (root) {
   'use strict';
 
-  const COLORS = ['c', 'm', 't', 'v']; // coral, mango, teal, violet
+  const COLORS = ['r', 'y', 'g', 'b']; // red, yellow, green, blue
   const ACTIONS = ['skip', 'rev', 'd2'];
+  const DRAW = { d2: 2, d4: 4, d6: 6 };
+  const BUST_AT = 15; // ruthless: holding this many cards knocks you out of the round
 
-  function buildDeck() {
+  /* modes: 'classic' (open ended), 'timed' (same rules, the room runs a match clock),
+     'ruthless' (draws stack, draw until you can play, extra cards, knock-outs) */
+  function buildDeck(mode) {
     const d = [];
     let id = 0;
     for (const c of COLORS) {
@@ -19,6 +23,10 @@
     for (let k = 0; k < 4; k++) {
       d.push({ id: id++, c: 'w', v: 'wild' });
       d.push({ id: id++, c: 'w', v: 'd4' });
+    }
+    if (mode === 'ruthless') {
+      for (let k = 0; k < 4; k++) d.push({ id: id++, c: 'w', v: 'd6' });
+      for (const c of COLORS) for (let k = 0; k < 2; k++) d.push({ id: id++, c, v: 'all' });
     }
     return d;
   }
@@ -37,19 +45,22 @@
   function cardPoints(card) {
     if (card.c === 'w') return 50;
     if (isNumber(card)) return Number(card.v);
-    return 20;
+    return card.v === 'all' ? 30 : 20;
   }
+  const handPoints = (hand) => hand.reduce((a, c) => a + cardPoints(c), 0);
+  const isDraw = (card) => DRAW[card.v] > 0;
 
   /* players: [{pid, name, bot}] ; opts: {stack:boolean, handSize:number}
      prev: previous state (to carry scores) or null */
   function newRound(players, opts, prev, rnd) {
-    const o = Object.assign({ stack: false, handSize: 7 }, opts || {});
+    const o = Object.assign({ mode: 'classic', stack: false, handSize: 7 }, opts || {});
+    if (o.mode === 'ruthless') { o.stack = true; o.bust = BUST_AT; } else { o.bust = 0; }
     const prevBy = {};
     if (prev) for (const p of prev.players) prevBy[p.pid] = p;
-    const deck = shuffle(buildDeck(), rnd);
+    const deck = shuffle(buildDeck(o.mode), rnd);
     const ps = players.map((p) => ({
       pid: p.pid, name: p.name, bot: !!p.bot,
-      hand: [], called: false,
+      hand: [], called: false, out: false, bustPts: 0,
       score: prevBy[p.pid] ? prevBy[p.pid].score : 0,
       wins: prevBy[p.pid] ? prevBy[p.pid].wins : 0,
     }));
@@ -69,7 +80,7 @@
     return {
       players: ps, deck, discard: [start], color: start.c,
       turn, dir: 1, pending: 0, drewId: null, uncalled: null,
-      phase: 'play', winner: null, points: 0, opts: o, round,
+      phase: 'play', winner: null, points: 0, opts: o, round, tick: 0, final: false,
     };
   }
 
@@ -79,6 +90,7 @@
     const t = top(s);
     if (s.pending > 0) {
       if (!s.opts.stack) return false;
+      if (s.opts.mode === 'ruthless') return isDraw(card);
       return card.v === 'd4' || (card.v === 'd2' && t.v === 'd2');
     }
     return card.c === 'w' || card.c === s.color || card.v === t.v;
@@ -95,27 +107,42 @@
     return s.players[pi].hand.filter((c) => canPlay(s, pi, c)).map((c) => c.id);
   }
 
+  const activeCount = (s) => s.players.filter((p) => !p.out).length;
+
+  /* the seat `steps` turns away, skipping anyone knocked out */
   function nextIndex(s, steps) {
     const n = s.players.length;
-    return (((s.turn + s.dir * steps) % n) + n) % n;
+    let i = s.turn;
+    for (let k = 0; k < steps; k++) {
+      let guard = 0;
+      do { i = (((i + s.dir) % n) + n) % n; } while (s.players[i].out && guard++ < n);
+    }
+    return i;
   }
 
   function advance(s, steps) {
     s.turn = nextIndex(s, steps);
     s.drewId = null;
+    s.tick++;
+  }
+
+  function take(s, ev) {
+    if (!s.deck.length) {
+      if (s.discard.length <= 1) return null;
+      const keep = s.discard.pop();
+      s.deck = shuffle(s.discard);
+      s.discard = [keep];
+      ev.push({ t: 'shuffle' });
+    }
+    return s.deck.pop();
   }
 
   function drawCards(s, pi, n, ev, why) {
     const got = [];
     for (let k = 0; k < n; k++) {
-      if (!s.deck.length) {
-        if (s.discard.length <= 1) break;
-        const keep = s.discard.pop();
-        s.deck = shuffle(s.discard);
-        s.discard = [keep];
-        ev.push({ t: 'shuffle' });
-      }
-      got.push(s.deck.pop());
+      const c = take(s, ev);
+      if (!c) break;
+      got.push(c);
     }
     if (got.length) {
       s.players[pi].hand.push(...got);
@@ -124,8 +151,22 @@
     return got;
   }
 
+  /* ruthless: a hand that reaches the limit is out of the round */
+  function checkBust(s, pi, ev) {
+    const p = s.players[pi];
+    if (!s.opts.bust || p.out || p.hand.length < s.opts.bust) return false;
+    p.out = true;
+    p.called = false;
+    p.bustPts = handPoints(p.hand);
+    s.deck = shuffle(p.hand).concat(s.deck); // back under the deck
+    p.hand = [];
+    if (s.uncalled === pi) s.uncalled = null;
+    ev.push({ t: 'bust', p: pi });
+    return true;
+  }
+
   function bestColor(hand) {
-    const cnt = { c: 0, m: 0, t: 0, v: 0 };
+    const cnt = { r: 0, y: 0, g: 0, b: 0 };
     for (const c of hand) if (c.c !== 'w') cnt[c.c]++;
     let best = COLORS[Math.floor(Math.random() * 4)];
     let max = 0;
@@ -135,10 +176,11 @@
 
   function fail(err) { return { ok: false, err, events: [] }; }
 
-  function finish(s, pi, ev) {
+  function finish(s, pi, ev, why) {
     let pts = 0;
-    for (const p of s.players) for (const c of p.hand) pts += cardPoints(c);
+    s.players.forEach((p, i) => { if (i !== pi) pts += handPoints(p.hand) + (p.bustPts || 0); });
     s.phase = 'over';
+    s.why = why || 'out';
     s.winner = pi;
     s.points = pts;
     s.players[pi].score += pts;
@@ -146,7 +188,23 @@
     s.uncalled = null;
     s.pending = 0;
     s.drewId = null;
-    ev.push({ t: 'win', p: pi, points: pts });
+    ev.push({ t: 'win', p: pi, points: pts, why: why || 'out' });
+  }
+
+  /* the match clock ran out: the lightest hand takes the pot */
+  function timeUp(s) {
+    if (s.phase !== 'play') return fail('Round is over');
+    let best = -1;
+    s.players.forEach((p, i) => {
+      if (p.out) return;
+      if (best < 0) { best = i; return; }
+      const a = handPoints(p.hand), b = handPoints(s.players[best].hand);
+      if (a < b || (a === b && p.hand.length < s.players[best].hand.length)) best = i;
+    });
+    const ev = [{ t: 'timeup' }];
+    finish(s, best, ev, 'time');
+    s.final = true;
+    return { ok: true, events: ev };
   }
 
   function play(s, pi, cardId, color) {
@@ -173,16 +231,21 @@
     }
     p.called = false;
 
-    const n = s.players.length;
-    if (card.v === 'skip') {
+    const n = activeCount(s);
+    if (card.v === 'all') {
+      // everyone else is hopped: same player goes again
+      if (!out) ev.push({ t: 'skipall', p: pi });
+      s.drewId = null;
+      s.tick++;
+    } else if (card.v === 'skip') {
       if (!out) ev.push({ t: 'skip', p: nextIndex(s, 1) });
       advance(s, 2);
     } else if (card.v === 'rev') {
       s.dir = -s.dir;
       ev.push({ t: 'rev', dir: s.dir });
       if (n === 2) advance(s, 2); else advance(s, 1);
-    } else if (card.v === 'd2' || card.v === 'd4') {
-      const amt = card.v === 'd2' ? 2 : 4;
+    } else if (isDraw(card)) {
+      const amt = DRAW[card.v];
       if (s.opts.stack && !out) {
         s.pending += amt;
         advance(s, 1);
@@ -211,12 +274,28 @@
       const n = s.pending;
       s.pending = 0;
       drawCards(s, pi, n, ev, 'penalty');
+      const bust = checkBust(s, pi, ev);
       advance(s, 1);
+      if (bust && activeCount(s) === 1) finish(s, s.turn, ev, 'last');
       return { ok: true, events: ev };
     }
-    const got = drawCards(s, pi, 1, ev, 'draw');
-    if (got.length && matches(s, got[0])) {
-      s.drewId = got[0].id; // may play it or pass
+    // classic: one card. ruthless: keep drawing until something fits (or you bust)
+    const p = s.players[pi];
+    const got = [];
+    for (;;) {
+      const c = take(s, ev);
+      if (!c) break;
+      got.push(c);
+      p.hand.push(c);
+      if (s.opts.mode !== 'ruthless' || matches(s, c) || p.hand.length >= s.opts.bust) break;
+    }
+    if (got.length) ev.push({ t: 'draw', p: pi, n: got.length, cards: got, why: 'draw' });
+    const last = got[got.length - 1];
+    if (checkBust(s, pi, ev)) {
+      advance(s, 1);
+      if (activeCount(s) === 1) finish(s, s.turn, ev, 'last');
+    } else if (last && matches(s, last)) {
+      s.drewId = last.id; // may play it or pass
     } else {
       if (!got.length) ev.push({ t: 'pass', p: pi });
       advance(s, 1);
@@ -253,10 +332,15 @@
     s.uncalled = null;
     const ev = [{ t: 'catch', p: target, by }];
     drawCards(s, target, 2, ev, 'caught');
+    if (checkBust(s, target, ev)) {
+      if (s.turn === target) advance(s, 1);
+      if (activeCount(s) === 1) finish(s, s.turn, ev, 'last');
+    }
     return { ok: true, events: ev };
   }
 
   function act(s, pi, a) {
+    if (s.players[pi] && s.players[pi].out) return fail('You are out of this round');
     switch (a && a.type) {
       case 'play': return play(s, pi, a.cardId, a.color);
       case 'draw': return draw(s, pi);
@@ -274,9 +358,14 @@
       you: pi,
       round: s.round,
       phase: s.phase,
+      mode: s.opts.mode,
+      final: !!s.final,
+      tick: s.tick,
       players: s.players.map((p) => ({
-        name: p.name, bot: p.bot, count: p.hand.length, score: p.score, wins: p.wins,
+        name: p.name, bot: p.bot, count: p.hand.length, score: p.score, wins: p.wins, out: !!p.out,
       })),
+      // once the round is over everyone shows what they were holding
+      reveal: s.phase === 'over' ? s.players.map((p) => ({ cards: p.hand.slice(), pts: handPoints(p.hand) + (p.bustPts || 0), out: !!p.out })) : null,
       hand: me ? me.hand.slice() : [],
       top: top(s),
       color: s.color,
@@ -289,6 +378,8 @@
       playable: playable(s, pi),
       deckCount: s.deck.length,
       winner: s.winner,
+      why: s.why || null,
+      bust: s.opts.bust || 0,
       points: s.points,
       opts: s.opts,
     };
@@ -312,10 +403,12 @@
     const colorCount = (c) => p.hand.filter((h) => h.c === c.c).length;
     const score = (c) => {
       let v = 0;
-      if (c.c === 'w') v = c.v === 'd4' ? 2 : 1; // keep wilds for later
+      if (c.c === 'w') v = c.v === 'wild' ? 1 : 2; // keep wilds for later
+      else if (c.v === 'all') v = 13 + colorCount(c);
       else if (isNumber(c)) v = 10 + Number(c.v) / 2 + colorCount(c);
       else v = 14 + colorCount(c);
-      if (nextCount <= 2 && (c.v === 'd2' || c.v === 'd4' || c.v === 'skip')) v += 30;
+      if (nextCount <= 2 && (isDraw(c) || c.v === 'skip')) v += 30;
+      if (s.pending > 0) v += 20 - DRAW[c.v]; // answering a stack: spend the small ones first
       if (p.hand.length <= 2 && c.c === 'w') v += 5;
       return v + Math.random();
     };
@@ -326,8 +419,8 @@
   }
 
   const api = {
-    COLORS, buildDeck, shuffle, newRound, act, view, eventsFor, botMove,
-    playable, canPlay, cardPoints, isNumber,
+    COLORS, BUST_AT, buildDeck, shuffle, newRound, act, timeUp, view, eventsFor, botMove,
+    playable, canPlay, cardPoints, handPoints, isNumber, isDraw,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.EkkaEngine = api;

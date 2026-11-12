@@ -1,29 +1,34 @@
-/* Ekka — screens, table rendering and animations. */
+/* Ekka — screens, table rendering, input and animations. */
 (function () {
   'use strict';
-  const { HostRoom, GuestClient } = self.EkkaRoom;
+  const { HostRoom, GuestClient, AVATARS, REACTIONS } = self.EkkaRoom;
   const Net = self.EkkaNet;
   const Sfx = self.EkkaSfx;
   const $ = (id) => document.getElementById(id);
 
   const app = $('app');
   const fx = $('fx');
+  const tableEl = $('table');
   const seatsEl = $('seats');
   const handEl = $('hand');
   const handInner = $('handInner');
   const pileEl = $('pile');
   const deckEl = $('deck');
   const ringEl = $('ring');
+  const statusEl = $('status');
 
-  const COLOR_VAR = { c: 'var(--coral)', m: 'var(--mango)', t: 'var(--teal)', v: 'var(--violet)' };
-  const COLOR_HEX = { c: '#ff5d5d', m: '#ffb020', t: '#12b5a4', v: '#7c5cff' };
-  const COLOR_NAME = { c: 'Coral', m: 'Mango', t: 'Teal', v: 'Violet' };
-  const AVATARS = ['#ff5d5d', '#12b5a4', '#ffb020', '#7c5cff', '#ff7ac3', '#3aa0ff', '#7cb342', '#ff8a3d'];
-  const COLOR_ORDER = 'cmtvw';
-  const VALUE_ORDER = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'skip', 'rev', 'd2', 'wild', 'd4'];
+  const COLOR_VAR = { r: 'var(--red)', y: 'var(--amber)', g: 'var(--green)', b: 'var(--blue)' };
+  const COLOR_HEX = { r: '#f23d4f', y: '#ffc21a', g: '#1fba5e', b: '#2f80ff' };
+  const COLOR_NAME = { r: 'Red', y: 'Yellow', g: 'Green', b: 'Blue' };
+  const COLOR_ORDER = 'rygbw';
+  const VALUE_ORDER = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'skip', 'rev', 'all', 'd2', 'wild', 'd4', 'd6'];
+  const MODE_NAME = { classic: 'Classic', timed: 'Timed', ruthless: 'Ruthless' };
 
-  const SVG_HOP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14c1.500-8 13-9.500 17-1.500"/><path d="M21 5.500v7.500h-7.500"/><circle cx="8.500" cy="19" r="1.800" fill="currentColor" stroke="none"/></svg>';
-  const SVG_FLIP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h14l-4-4"/><path d="M20 15H6l4 4"/></svg>';
+  const SVG_OPEN = '<svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">';
+  const twoTone = (paths) => SVG_OPEN + '<g class="bk" stroke-width="6.4">' + paths + '</g><g stroke="#fff" stroke-width="3.1">' + paths + '</g></svg>';
+  const SVG_HOP = twoTone('<path d="M3.500 15c1.500-8 12-9.500 16-1.500"/><path d="M20.500 6.500v7h-7"/><path d="M7 19.500h.01"/>');
+  const SVG_FLIP = twoTone('<path d="M4 8.500h14.500l-4-4"/><path d="M20 15.500H5.500l4 4"/>');
+  const SVG_ALL = twoTone('<path d="M2.500 13.500c.8-5.500 6.200-6.500 8.500-1.500"/><path d="M11.500 7.500v5H7"/><path d="M12.500 13.500c.8-5.500 6.200-6.500 8.500-1.500"/><path d="M21.500 7.500v5H17"/><path d="M5 19h.01M12 19h.01M19 19h.01"/>');
 
   let session = null;
   let lobby = null;
@@ -36,6 +41,8 @@
   const handEls = new Map();
   let seatEls = {};
   let seatOrder = [];
+  let HL = null;           // last hand layout, for hit-testing a finger sliding along the fan
+  let drag = null;
 
   /* ---------- storage ---------- */
   const store = {
@@ -51,10 +58,14 @@
     } catch (e) { return 'p-' + Math.random().toString(36).slice(2, 12); }
   }
   const pid = getPid();
+  let myAv = store.get('ekka.av');
+  if (!AVATARS.includes(myAv)) myAv = AVATARS[Math.floor(Math.random() * AVATARS.length)];
 
   /* ---------- small helpers ---------- */
   const sleep = (ms) => new Promise((r) => setTimeout(r, document.hidden ? 0 : ms));
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  function buzz(p) { if (navigator.vibrate) { try { navigator.vibrate(p); } catch (e) { /* noop */ } } }
   function show(name) {
     if (app.dataset.screen === name) return false;
     app.dataset.screen = name;
@@ -74,15 +85,23 @@
     try { if (navigator.wakeLock && !wake) { wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release', () => { wake = null; }); } } catch (e) { /* not allowed */ }
   }
   document.addEventListener('visibilitychange', () => { if (!document.hidden && app.dataset.screen === 'table') keepAwake(); });
+  function quake() {
+    if (document.hidden) return;
+    tableEl.classList.remove('quake'); void tableEl.offsetWidth; tableEl.classList.add('quake');
+    setTimeout(() => tableEl.classList.remove('quake'), 420);
+  }
+  const fmtClock = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 
   /* ---------- cards ---------- */
   function glyph(card, corner) {
     switch (card.v) {
       case 'skip': return SVG_HOP;
       case 'rev': return SVG_FLIP;
+      case 'all': return SVG_ALL;
       case 'd2': return '+2';
       case 'wild': return '<span class="wheel"></span>';
       case 'd4': return corner ? '+4' : '<span class="wheel">+4</span>';
+      case 'd6': return corner ? '+6' : '<span class="wheel">+6</span>';
       default: return card.v;
     }
   }
@@ -95,7 +114,7 @@
     const g = glyph(card, true);
     el.innerHTML =
       '<span class="cn tl' + ul + '">' + g + '<i class="shape"></i></span>' +
-      '<div class="page"><span class="big' + ul + txt + '">' + glyph(card, false) + '</span></div>' +
+      '<div class="page"><span class="big' + txt + '">' + glyph(card, false) + '</span></div>' +
       '<span class="cn br' + ul + '">' + g + '<i class="shape"></i></span>';
     return el;
   }
@@ -106,7 +125,8 @@
     return el;
   }
   const sortKey = (c) => COLOR_ORDER.indexOf(c.c) * 100 + VALUE_ORDER.indexOf(c.v);
-  const cardW = () => pileEl.getBoundingClientRect().width || 70;
+  const sortedHand = () => V.hand.slice().sort((a, b) => sortKey(a) - sortKey(b));
+  const cardW = () => $('probe').getBoundingClientRect().width || 70;
 
   /* ---------- geometry + flights ---------- */
   function rectOf(el) {
@@ -119,9 +139,15 @@
       return { x: r.left + r.width / 2, y: r.top + r.height * 0.6, w: cardW() };
     }
     const el = seatEls[pi];
-    if (!el) return { x: innerWidth / 2, y: 60, w: 20 };
-    const r = el.querySelector('.count').getBoundingClientRect();
-    return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: 26 };
+    if (!el) return { x: innerWidth / 2, y: 60, w: 18 };
+    const r = el.querySelector('.fan').getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height * 0.45, w: 18 };
+  }
+  function avatarPoint(pi) {
+    const el = V && pi === V.you ? $('meChip') : seatEls[pi];
+    if (!el) return { x: innerWidth / 2, y: innerHeight / 2 };
+    const r = (el.querySelector('.av-wrap') || el).getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2, h: r.height };
   }
   const pileRot = (id) => ((id * 37) % 23) - 11;
 
@@ -139,8 +165,8 @@
     g.append(f);
     const s0 = o.from.w / cw, s1 = o.to.w / cw;
     const t0 = `translate(${o.from.x}px, ${o.from.y}px) scale(${s0}) rotate(${o.rot0 || 0}deg)`;
-    const mx = (o.from.x + o.to.x) / 2, my = (o.from.y + o.to.y) / 2 - 18;
-    const tm = `translate(${mx}px, ${my}px) scale(${Math.max(s0, s1) * 1.12}) rotate(${((o.rot0 || 0) + (o.rot1 || 0)) / 2}deg)`;
+    const mx = (o.from.x + o.to.x) / 2, my = (o.from.y + o.to.y) / 2 - 22;
+    const tm = `translate(${mx}px, ${my}px) scale(${Math.max(s0, s1) * 1.14}) rotate(${((o.rot0 || 0) + (o.rot1 || 0)) / 2}deg)`;
     const t1 = `translate(${o.to.x}px, ${o.to.y}px) scale(${s1}) rotate(${o.rot1 || 0}deg)`;
     g.style.transform = t0;
     f.style.transform = `rotateY(${o.fromFace ? 0 : 180}deg)`;
@@ -158,7 +184,8 @@
     el.className = 'burst ' + (cls || '');
     el.textContent = text;
     fx.append(el);
-    const x = Math.max(70, Math.min(innerWidth - 70, pt.x));
+    const half = el.offsetWidth / 2 + 8;
+    const x = clamp(pt.x, half, Math.max(half, innerWidth - half));
     const base = `translate(${x}px, ${pt.y}px) translate(-50%, -50%)`;
     const a = el.animate([
       { transform: base + ' scale(.2) rotate(-14deg)', opacity: 0 },
@@ -168,10 +195,12 @@
     ], { duration: life || 1000, easing: 'ease-out', fill: 'both' });
     a.finished.then(() => el.remove(), () => el.remove());
   }
-  const centerPt = () => { const r = pileEl.getBoundingClientRect(); return { x: innerWidth / 2, y: r.top - 46 }; };
+  const centerPt = () => { const r = pileEl.getBoundingClientRect(); return { x: innerWidth / 2, y: r.top - 44 }; };
+  const midPt = () => { const r = $('felt').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
   function seatBurstPt(pi) {
-    const p = seatPoint(pi);
-    return V && pi === V.you ? { x: p.x, y: p.y - cardW() * 1.1 } : { x: p.x - 14, y: p.y + 58 };
+    if (V && pi === V.you) { const p = seatPoint(pi); return { x: p.x, y: p.y - cardW() * 1.15 }; }
+    const p = avatarPoint(pi);
+    return { x: p.x, y: p.y + (p.h || 50) * 0.5 + 62 };
   }
 
   function wave(color) {
@@ -204,25 +233,48 @@
     }
   }
 
+  /* a reaction pops out of whoever sent it */
+  function showReact(pi, e) {
+    if (!V || document.hidden || app.dataset.screen !== 'table') return;
+    const p = avatarPoint(pi);
+    const mine = pi === V.you;
+    const el = document.createElement('div');
+    el.className = 'react-pop';
+    el.textContent = e;
+    fx.append(el);
+    const x = clamp(p.x + (mine ? 26 : 0), 30, innerWidth - 30);
+    const y = mine ? p.y - 34 : p.y + 6;
+    const base = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
+    const a = el.animate([
+      { transform: base + ' scale(.2) rotate(-20deg)', opacity: 0 },
+      { transform: base + ' scale(1.5) rotate(8deg)', opacity: 1, offset: 0.18 },
+      { transform: base + ' scale(1.15) rotate(-4deg)', opacity: 1, offset: 0.4 },
+      { transform: base + ' translateY(-8px) scale(1.2) rotate(4deg)', opacity: 1, offset: 0.75 },
+      { transform: base + ' translateY(-48px) scale(1.1)', opacity: 0 },
+    ], { duration: 1900, easing: 'ease-out', fill: 'both' });
+    a.finished.then(() => el.remove(), () => el.remove());
+    Sfx.play('pop');
+  }
+
   /* ---------- rendering: seats ---------- */
   function renderSeats() {
     const n = V.players.length;
     const order = [];
     for (let k = 1; k < n; k++) order.push((V.you + k) % n);
-    const key = order.join(',') + '|' + V.players.map((p) => p.name).join('\u0001');
+    const key = order.join(',') + '|' + V.players.map((p) => p.name + p.av).join('\u0001');
     if (seatsEl.dataset.key !== key) {
       seatsEl.dataset.key = key;
       seatsEl.innerHTML = '';
-      seatsEl.classList.toggle('compact', order.length > 4);
+      seatsEl.classList.toggle('compact', order.length > 3);
       seatEls = {};
-      order.forEach((pi, idx) => {
+      order.forEach((pi) => {
         const p = V.players[pi];
         const el = document.createElement('div');
         el.className = 'seat';
         el.innerHTML =
-          '<div class="avatar" style="--av:' + AVATARS[pi % AVATARS.length] + '">' + esc((p.name[0] || '?').toUpperCase()) + '</div>' +
-          '<span class="count">0</span>' +
-          '<span class="sname">' + esc(p.name) + '</span>';
+          '<div class="av-wrap"><svg class="tring" viewBox="0 0 60 60"><circle cx="30" cy="30" r="27"/></svg><div class="avatar">' + esc(p.av || '🙂') + '</div></div>' +
+          '<span class="sname">' + esc(p.name) + '</span>' +
+          '<div class="fan"><b class="count">0</b></div>';
         seatsEl.append(el);
         seatEls[pi] = el;
       });
@@ -233,8 +285,14 @@
       const el = seatEls[pi];
       el.classList.toggle('turn', V.phase === 'play' && V.turn === pi);
       el.classList.toggle('away', !!(V.away && V.away[pi]));
+      el.classList.toggle('out', !!V.players[pi].out);
       setCount(pi, V.players[pi].count);
     });
+    const me = V.players[V.you];
+    $('meAv').textContent = me.av || '🙂';
+    $('meCount').textContent = V.hand.length;
+    $('meChip').classList.toggle('turn', V.phase === 'play' && V.turn === V.you);
+    $('meChip').classList.toggle('out', !!me.out);
   }
   /* opponents sit around the top arc of the table, in turn order from my left */
   const SPANS = [0, 96, 150, 184, 200, 208, 214];
@@ -247,7 +305,7 @@
     const cx = F.left - A.left + F.width / 2, cy = F.top - A.top + F.height / 2;
     const rx = F.width / 2 - 5, ry = F.height / 2 - 5;
     const span = SPANS[Math.min(m, SPANS.length) - 1];
-    const pad = seatsEl.classList.contains('compact') ? 30 : 36;
+    const pad = seatsEl.classList.contains('compact') ? 34 : 44;
     seatOrder.forEach((pi, idx) => {
       const deg = m > 1 ? 270 - span / 2 + (span * idx) / (m - 1) : 270;
       const a = (deg * Math.PI) / 180;
@@ -255,8 +313,8 @@
       // superellipse: hugs the rounded-rectangle rim better than a plain ellipse
       let x = cx + rx * Math.sign(c) * Math.pow(Math.abs(c), 0.72);
       let y = cy + ry * Math.sign(s) * Math.pow(Math.abs(s), 0.72);
-      x = Math.max(pad, Math.min(A.width - pad, x));
-      y = Math.max(30, y);
+      x = clamp(x, pad, A.width - pad);
+      y = Math.max(34, y);
       const el = seatEls[pi];
       el.style.setProperty('--sx', x.toFixed(1) + 'px');
       el.style.setProperty('--sy', y.toFixed(1) + 'px');
@@ -266,11 +324,24 @@
   function setCount(pi, n, bump) {
     const el = seatEls[pi];
     if (!el) return;
-    const c = el.querySelector('.count');
+    const fan = el.querySelector('.fan');
+    const c = fan.querySelector('.count');
+    const k = Math.min(n, seatsEl.classList.contains('compact') ? 4 : 5);
+    const have = fan.querySelectorAll('i');
+    if (have.length !== k) {
+      have.forEach((x) => x.remove());
+      for (let i = 0; i < k; i++) {
+        const card = document.createElement('i');
+        card.style.setProperty('--i', i);
+        card.style.setProperty('--n', k);
+        fan.insertBefore(card, c);
+      }
+    }
     if (c.textContent !== String(n)) {
       c.textContent = n;
       if (bump) { c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
     }
+    c.classList.toggle('hot', n === 1 || (V.bust > 0 && n >= V.bust - 3));
     let flag = el.querySelector('.flag');
     const showFlag = n === 1 && V.phase === 'play' && V.uncalled !== pi;
     if (showFlag && !flag) { flag = document.createElement('span'); flag.className = 'flag'; flag.textContent = 'Ekka!'; el.append(flag); }
@@ -279,12 +350,12 @@
 
   /* ---------- rendering: hand ---------- */
   function renderHand(hiddenIds) {
-    const cards = V.hand.slice().sort((a, b) => sortKey(a) - sortKey(b));
+    const cards = sortedHand();
     const keep = new Set(cards.map((c) => c.id));
     for (const [id, el] of handEls) if (!keep.has(id)) { el.remove(); handEls.delete(id); }
     const myTurn = !animating && V.phase === 'play' && V.turn === V.you;
     const ok = new Set(myTurn ? V.playable : []);
-    cards.forEach((c, i) => {
+    cards.forEach((c) => {
       let el = handEls.get(c.id);
       if (!el) {
         el = makeCard(c);
@@ -293,46 +364,67 @@
         handInner.append(el);
       }
       el.classList.toggle('ok', ok.has(c.id));
-      el._i = i;
     });
     handEl.classList.toggle('myturn', myTurn);
+    $('meCount').textContent = cards.length;
     layoutHand(cards);
   }
+  /* one fanned row; a crowded hand splits into two so every card stays reachable */
   function layoutHand(cards) {
-    cards = cards || V.hand.slice().sort((a, b) => sortKey(a) - sortKey(b));
+    cards = cards || sortedHand();
     const n = cards.length;
-    const cw = cardW();
+    const cw = cardW(), ch = cw * 1.45;
     const W = handEl.clientWidth - 20;
-    const spread = Math.min(12, n * 1.7);
-    // rotated end cards swing outwards; keep them on screen
-    const side = Math.sin((spread * Math.PI) / 180) * cw * 1.45 * 0.75 + 4;
-    const room = W - side * 2;
-    const fit = n > 1 ? (room - cw) / (n - 1) : 0;
-    const gap = n > 1 ? Math.max(cw * 0.3, Math.min(cw * 0.66, fit)) : 0;
-    const total = cw + gap * (n - 1);
-    const full = Math.max(W, total + side * 2);
-    handInner.style.width = full + 'px';
-    const x0 = (full - total) / 2;
-    cards.forEach((c, i) => {
-      const el = handEls.get(c.id);
-      if (!el) return;
-      const t = n > 1 ? (i / (n - 1)) * 2 - 1 : 0;
-      el.style.setProperty('--x', (x0 + i * gap).toFixed(1) + 'px');
-      el.style.setProperty('--y', (t * t * cw * 0.14).toFixed(1) + 'px');
-      el.style.setProperty('--r', (t * spread).toFixed(1) + 'deg');
-      el.style.zIndex = i + 1;
+    const sideOf = (spread) => Math.sin((spread * Math.PI) / 180) * ch * 0.75 + 4;
+    const fit1 = n > 1 ? (W - sideOf(Math.min(12, n * 1.7)) * 2 - cw) / (n - 1) : cw;
+    const two = n > 7 && fit1 < cw * 0.34;
+    const cut = Math.ceil(n / 2);
+    const rows = two ? [cards.slice(0, cut), cards.slice(cut)] : [cards];
+    const rowLift = two ? ch * 0.46 : 0;
+    handInner.style.setProperty('--rowlift', rowLift.toFixed(1) + 'px');
+    HL = { rows: [], rowLift, top: 40 };
+    let z = 1;
+    rows.forEach((row, ri) => {
+      const m = row.length;
+      const spread = Math.min(two ? 8 : 12, m * 1.7);
+      const room = W - sideOf(spread) * 2;
+      const fit = m > 1 ? (room - cw) / (m - 1) : 0;
+      const gap = m > 1 ? clamp(fit, cw * 0.18, cw * 0.66) : 0;
+      const total = cw + gap * (m - 1);
+      const x0 = (W - total) / 2;
+      const yBase = two && ri === 1 ? rowLift : 0;
+      row.forEach((c, i) => {
+        const el = handEls.get(c.id);
+        if (!el) return;
+        const t = m > 1 ? (i / (m - 1)) * 2 - 1 : 0;
+        el.style.setProperty('--x', (x0 + i * gap).toFixed(1) + 'px');
+        el.style.setProperty('--y', (yBase + t * t * cw * 0.14).toFixed(1) + 'px');
+        el.style.setProperty('--r', (t * spread).toFixed(1) + 'deg');
+        el.style.zIndex = z++;
+      });
+      HL.rows.push({ ids: row.map((c) => c.id), x0, gap, cw });
     });
+  }
+  /* which card is under a finger sliding along the hand */
+  function cardAt(clientX, clientY) {
+    if (!HL || !HL.rows.length) return null;
+    const r = handInner.getBoundingClientRect();
+    const x = clientX - r.left, y = clientY - r.top;
+    const row = HL.rows.length > 1 && y >= HL.top + HL.rowLift ? HL.rows[1] : HL.rows[0];
+    if (!row.ids.length) return null;
+    const i = row.gap > 0 ? clamp(Math.floor((x - row.x0) / row.gap), 0, row.ids.length - 1) : 0;
+    return row.ids[i];
   }
 
   /* ---------- rendering: piles + status ---------- */
   function pileCard(card, land) {
     const el = makeCard(card);
     el.style.setProperty('--rot', pileRot(card.id) + 'deg');
-    el.style.setProperty('--dx', ((card.id * 13) % 9) - 4 + 'px');
-    el.style.setProperty('--dy', ((card.id * 7) % 7) - 3 + 'px');
+    el.style.setProperty('--dx', ((card.id * 13) % 11) - 5 + 'px');
+    el.style.setProperty('--dy', ((card.id * 7) % 9) - 4 + 'px');
     if (land) el.classList.add('land');
     pileEl.append(el);
-    while (pileEl.children.length > 4) pileEl.firstChild.remove();
+    while (pileEl.children.length > 5) pileEl.firstChild.remove();
     return el;
   }
   function renderPile(land) {
@@ -353,20 +445,23 @@
     const me = V.you;
     const playing = V.phase === 'play';
     const myTurn = playing && V.turn === me && !animating;
-    const st = $('status');
+    const out = V.players[me].out;
     let text = '';
     if (playing) {
       const cur = V.players[V.turn];
       if (V.turn === me) {
+        const ruthless = V.mode === 'ruthless';
         if (V.pending > 0) text = V.playable.length ? `Stack it, or draw ${V.pending}` : `Ouch. Draw ${V.pending}`;
         else if (V.drewId != null) text = 'It fits! Play it or keep it';
-        else if (V.playable.length) text = 'Your turn';
-        else text = 'Nothing fits. Draw a card';
-      } else if (V.away && V.away[V.turn]) text = `Waiting for ${cur.name} to come back…`;
+        else if (V.playable.length) text = store.get('ekka.tip') ? 'Your turn' : 'Your turn: tap a card or flick it up';
+        else text = ruthless ? 'Nothing fits. Draw until it does' : 'Nothing fits. Draw a card';
+      } else if (out) text = `You're out this round · ${cur.name}'s turn`;
+      else if (V.away && V.away[V.turn]) text = `Waiting for ${cur.name} to come back…`;
       else text = cur.bot ? `${cur.name} is thinking…` : `${cur.name}'s turn`;
     }
-    st.textContent = text;
-    st.classList.toggle('mine', playing && V.turn === me);
+    $('statusText').textContent = text;
+    statusEl.classList.toggle('empty', !text);
+    statusEl.classList.toggle('mine', playing && V.turn === me);
 
     const canDraw = myTurn && V.drewId == null;
     deckEl.classList.toggle('can', canDraw);
@@ -379,50 +474,129 @@
     const bc = $('btnCall');
     bc.hidden = !(mustCall || mayCall);
     bc.classList.toggle('urgent', mustCall);
-    const canCatch = playing && V.uncalled != null && V.uncalled !== me;
+    const canCatch = playing && V.uncalled != null && V.uncalled !== me && !out;
     const bt = $('btnCatch');
     bt.hidden = !canCatch;
     if (canCatch) bt.textContent = 'Catch ' + V.players[V.uncalled].name + '!';
 
+    if (!myTurn && pendingWild != null) closePicker(); // the turn moved on while the colour wheel was open
     const pend = $('pending');
     pend.hidden = !(V.pending > 0);
     pend.textContent = '+' + V.pending;
     ringEl.classList.toggle('ccw', V.dir < 0);
 
     const mine = playing && V.turn === me;
-    if (mine && !wasMyTurn) {
-      Sfx.play('turn');
-      if (navigator.vibrate) { try { navigator.vibrate(50); } catch (e) { /* noop */ } }
-    }
+    if (mine && !wasMyTurn) { Sfx.play('turn'); buzz(50); }
     wasMyTurn = mine;
   }
 
+  /* ---------- timers: the turn countdown and the match clock ---------- */
+  let ringAnim = null, barAnim = null, hurryTimer = null, tickTimer = null;
+  function clearTimerFx() {
+    if (ringAnim) { ringAnim.cancel(); ringAnim = null; }
+    if (barAnim) { barAnim.cancel(); barAnim = null; }
+    clearTimeout(hurryTimer); clearInterval(tickTimer);
+    statusEl.classList.remove('hurry');
+    for (const k in seatEls) seatEls[k].classList.remove('timed');
+  }
+  function armTimerFx() {
+    clearTimerFx();
+    if (!V || V.phase !== 'play' || V.turnLeft == null || animating || document.hidden) return;
+    const total = V.turnTotal || 1;
+    const left = Math.min(total, V.turnLeft - (Date.now() - V._at));
+    if (left <= 0) return;
+    if (V.turn === V.you) {
+      barAnim = $('tbar').animate([{ transform: `scaleX(${left / total})` }, { transform: 'scaleX(0)' }], { duration: left, fill: 'forwards' });
+      const hurryAt = Math.min(5000, total * 0.25);
+      hurryTimer = setTimeout(() => {
+        statusEl.classList.add('hurry');
+        Sfx.play('tick'); buzz(30);
+        tickTimer = setInterval(() => Sfx.play('tick'), 1000);
+      }, Math.max(0, left - hurryAt));
+    } else {
+      const el = seatEls[V.turn];
+      if (!el) return;
+      el.classList.add('timed');
+      const C = 2 * Math.PI * 27;
+      ringAnim = el.querySelector('.tring circle').animate(
+        [{ strokeDasharray: `${(C * left) / total} ${C}`, stroke: '#ffc736' }, { strokeDasharray: `0 ${C}`, stroke: '#f23d4f' }],
+        { duration: left, fill: 'forwards' });
+    }
+  }
+  function paintClock() {
+    const el = $('clock');
+    const c = V && V.clock;
+    if (!c || app.dataset.screen !== 'table') { el.hidden = true; return; }
+    const left = c.running && V.phase === 'play' ? c.left - (Date.now() - V._at) : c.left;
+    el.hidden = false;
+    el.textContent = '⏱ ' + fmtClock(left);
+    el.classList.toggle('low', V.phase === 'play' && left < Math.min(30000, c.total * 0.15));
+  }
+  setInterval(paintClock, 250);
+
+  /* ---------- round over ---------- */
   function renderOver() {
     const box = $('roundOver');
     if (V.phase !== 'over') { box.hidden = true; return; }
     const w = V.players[V.winner];
     const iWon = V.winner === V.you;
-    $('overKicker').textContent = 'Round ' + V.round;
-    $('overTitle').textContent = iWon ? 'You win!' : w.name + ' wins!';
-    $('overSub').textContent = V.points ? `+${V.points} points from the cards everyone was left holding` : 'A clean sweep';
-    const rows = V.players.map((p, i) => ({ p, i })).sort((a, b) => b.p.score - a.p.score || b.p.wins - a.p.wins);
-    $('overScores').innerHTML =
-      '<tr><th>Player</th><th>Cards left</th><th>Wins</th><th>Points</th></tr>' +
-      rows.map(({ p, i }) => `<tr class="${i === V.winner ? 'win' : ''} ${i === V.you ? 'you' : ''}"><td>${esc(p.name)}</td><td>${p.count}</td><td>${p.wins}</td><td>${p.score}</td></tr>`).join('');
+    const reveal = V.reveal || V.players.map(() => ({ cards: [], pts: 0 }));
+    const rows = V.players.map((p, i) => ({ p, i, r: reveal[i] })).sort((a, b) => b.p.score - a.p.score || (a.i === V.winner ? -1 : b.i === V.winner ? 1 : 0));
+    if (V.final) {
+      const champ = rows[0];
+      $('overKicker').textContent = 'Match over';
+      $('overTitle').textContent = champ.i === V.you ? '🏆 You win the match!' : `🏆 ${champ.p.name} wins the match!`;
+      $('overSub').textContent = V.why === 'time'
+        ? `Time! ${iWon ? 'You were' : w.name + ' was'} holding the lightest hand: +${V.points}`
+        : `${iWon ? 'You' : w.name} took the last round: +${V.points}`;
+    } else {
+      $('overKicker').textContent = 'Round ' + V.round + (V.clock ? ' · ' + fmtClock(V.clock.left) + ' left' : '');
+      $('overTitle').textContent = iWon ? 'You win!' : w.name + ' wins!';
+      $('overSub').textContent = V.why === 'last' ? `Last one standing: +${V.points} points`
+        : V.points ? `+${V.points} points from the cards everyone was left holding` : 'A clean sweep';
+    }
+    const list = $('overScores');
+    list.innerHTML = '';
+    rows.forEach(({ p, i, r }) => {
+      const li = document.createElement('li');
+      const win = i === V.winner;
+      if (win) li.className = 'win';
+      li.innerHTML =
+        '<div class="avatar">' + esc(p.av || '🙂') + '</div>' +
+        '<div class="who"><span class="nm">' + (win ? '👑 ' : '') + esc(p.name) + (i === V.you ? ' <em>(you)</em>' : '') + '</span><div class="left"></div></div>' +
+        '<div class="tot">' + p.score + '<small>' + (win ? '+' + V.points : r.out ? 'knocked out' : r.pts + ' in hand') + '</small></div>';
+      const left = li.querySelector('.left');
+      const cards = r.cards.slice().sort((a, b) => sortKey(a) - sortKey(b));
+      if (!cards.length) {
+        const note = document.createElement('span');
+        note.className = 'note';
+        note.textContent = win ? 'Played every card' : r.out ? `Held ${V.bust} cards · ${r.pts} points` : '';
+        left.append(note);
+      } else {
+        cards.slice(0, 10).forEach((c) => left.append(makeCard(c)));
+        if (cards.length > 10) { const more = document.createElement('span'); more.className = 'more'; more.textContent = '+' + (cards.length - 10); left.append(more); }
+      }
+      list.append(li);
+    });
     const host = lobby && lobby.isHost;
     $('btnNext').hidden = !host;
-    $('btnToLobby').hidden = !host || (lobby && lobby.solo);
+    $('btnNext').textContent = V.final ? 'New match' : 'Next round';
+    $('btnToLobby').hidden = !host;
+    $('btnToLobby').textContent = lobby && lobby.solo ? 'Change mode' : 'Back to the room';
     $('overWait').hidden = !!host;
     box.hidden = false;
   }
 
   function renderAll() {
-    $('tableCode').textContent = lobby && !lobby.solo ? 'Room ' + lobby.code : 'Ekka';
+    const mode = MODE_NAME[V.mode] || 'Ekka';
+    $('tableCode').innerHTML = esc(mode) + (lobby && !lobby.solo ? '<small>Room ' + esc(lobby.code) + '</small>' : '');
     renderSeats();
     renderPile(false);
     renderHand();
     renderStatus();
     renderOver();
+    armTimerFx();
+    paintClock();
   }
 
   /* ---------- event animations ---------- */
@@ -472,27 +646,32 @@
   async function animPlay(ev) {
     const mine = ev.p === V.you;
     let from;
+    let thrown = false;
     if (mine) {
       const el = handEls.get(ev.card.id);
+      thrown = !!(el && el.classList.contains('drag'));
       from = el ? rectOf(el) : seatPoint(ev.p);
+      if (thrown) from.w = cardW() * 1.1;
       if (el) { el.remove(); handEls.delete(ev.card.id); }
       V.hand = V.hand.filter((c) => c.id !== ev.card.id);
+      $('meCount').textContent = V.hand.length;
       layoutHand();
+      store.set('ekka.tip', '1');
     } else {
       from = seatPoint(ev.p);
     }
     V.players[ev.p].count = Math.max(0, V.players[ev.p].count - 1);
     if (!mine) setCount(ev.p, V.players[ev.p].count, true);
     Sfx.play('play');
-    await fly({ from, to: rectOf(pileEl), card: ev.card, fromFace: mine, toFace: true, dur: mine ? 330 : 430, rot0: mine ? 0 : -20, rot1: pileRot(ev.card.id) });
+    await fly({ from, to: rectOf(pileEl), card: ev.card, fromFace: mine, toFace: true, dur: thrown ? 230 : mine ? 330 : 430, rot0: mine ? 0 : -20, rot1: pileRot(ev.card.id) });
     V.top = ev.card;
     V.color = ev.color;
     renderPile(true);
     const v = ev.card.v;
     if (ev.card.c === 'w') { wave(ev.color); Sfx.play('wild'); }
-    if (v === 'd2' || v === 'd4') {
+    if (v === 'd2' || v === 'd4' || v === 'd6') {
       Sfx.play('plus');
-      if (!V.opts.stack) burst(v === 'd2' ? '+2' : '+4', centerPt(), 'red', 900);
+      if (!V.opts.stack) burst('+' + v.slice(1), centerPt(), 'red', 900);
     }
     if (ev.card.c === 'w') await sleep(320);
     else await sleep(120);
@@ -502,6 +681,9 @@
     const mine = ev.p === V.you;
     const from = rectOf(deckEl);
     const flights = [];
+    const hit = ev.why === 'penalty' || ev.why === 'caught';
+    if (hit && (mine || ev.n >= 4)) { quake(); if (mine) buzz([40, 60, 90]); }
+    const stepMs = ev.n > 4 ? 90 : 130;
     if (mine && ev.cards) {
       const ids = new Set(ev.cards.map((c) => c.id));
       V.hand = V.hand.concat(ev.cards);
@@ -511,7 +693,7 @@
       await sleep(40);
       ev.cards.forEach((card, i) => {
         const el = handEls.get(card.id);
-        const delay = i * 130;
+        const delay = i * stepMs;
         setTimeout(() => Sfx.play('draw'), delay);
         const to = el ? rectOf(el) : seatPoint(ev.p);
         flights.push(fly({ from, to, card, fromFace: false, toFace: true, dur: 430, delay }).then(() => {
@@ -521,7 +703,7 @@
     } else {
       const to = seatPoint(ev.p);
       for (let i = 0; i < ev.n; i++) {
-        const delay = i * 120;
+        const delay = i * (stepMs - 10);
         setTimeout(() => Sfx.play('draw'), delay);
         flights.push(fly({ from, to, card: null, fromFace: false, toFace: false, dur: 380, delay, rot1: 25 }).then(() => {
           V.players[ev.p].count++;
@@ -535,6 +717,13 @@
     await sleep(80);
   }
 
+  function zap(pi) {
+    const el = seatEls[pi];
+    if (!el) return;
+    el.classList.remove('zap'); void el.offsetWidth; el.classList.add('zap');
+    setTimeout(() => el.classList.remove('zap'), 520);
+  }
+
   async function playEvent(ev, fin) {
     switch (ev.t) {
       case 'deal': await animDeal(fin); break;
@@ -542,15 +731,23 @@
       case 'draw': await animDraw(ev); break;
       case 'skip':
         Sfx.play('skip');
+        zap(ev.p);
+        if (ev.p === V.you) buzz(60);
         burst(ev.p === V.you ? 'You got hopped!' : 'Hopped!', seatBurstPt(ev.p), 'small white', 900);
         await sleep(420);
+        break;
+      case 'skipall':
+        Sfx.play('skip');
+        seatOrder.forEach((pi) => { if (pi !== ev.p) zap(pi); });
+        burst(ev.p === V.you ? 'Hop all! Go again' : 'Hop all!', centerPt(), 'white', 950);
+        await sleep(480);
         break;
       case 'rev':
         V.dir = ev.dir;
         Sfx.play('rev');
         ringEl.classList.toggle('ccw', V.dir < 0);
         ringEl.classList.add('flash');
-        setTimeout(() => ringEl.classList.remove('flash'), 600);
+        setTimeout(() => ringEl.classList.remove('flash'), 700);
         burst('Flip!', centerPt(), 'small white', 800);
         await sleep(420);
         break;
@@ -563,21 +760,48 @@
       case 'catch':
         $('btnCatch').hidden = true; $('btnCall').hidden = true;
         Sfx.play('caught');
+        zap(ev.p);
         burst(ev.p === V.you ? 'Caught! +2' : `${V.players[ev.by].name} caught ${V.players[ev.p].name}!`, ev.p === V.you ? seatBurstPt(ev.p) : centerPt(), 'small red', 1300);
         await sleep(450);
         break;
+      case 'bust':
+        Sfx.play('out');
+        quake();
+        V.players[ev.p].out = true;
+        V.players[ev.p].count = 0;
+        if (ev.p === V.you) { V.hand = []; buzz([80, 60, 160]); renderHand(); }
+        renderSeats();
+        burst(ev.p === V.you ? "You're out!" : V.players[ev.p].name + ' is out!', ev.p === V.you ? seatBurstPt(ev.p) : midPt(), 'red', 1300);
+        await sleep(800);
+        break;
+      case 'timeout':
+        Sfx.play('nope');
+        burst('Too slow!', seatBurstPt(ev.p), 'small white', 850);
+        await sleep(350);
+        break;
+      case 'timeup':
+        clearTimerFx();
+        Sfx.play('time');
+        quake();
+        buzz([120, 80, 120]);
+        burst("Time's up!", midPt(), 'huge', 1600);
+        await sleep(1400);
+        break;
       case 'shuffle': toast('Deck ran out. Reshuffled the pile.'); break;
-      case 'win':
-        if (ev.p === fin.you) { Sfx.play('win'); confetti(90); burst('You win!', centerPt(), '', 1400); }
+      case 'win': {
+        const match = fin.final;
+        if (ev.p === fin.you) { Sfx.play('win'); confetti(match ? 140 : 90); burst(ev.why === 'last' ? 'Last one standing!' : 'You win!', centerPt(), '', 1400); buzz([60, 40, 60, 40, 160]); }
         else { Sfx.play('lose'); confetti(24); burst(fin.players[ev.p].name + ' wins!', centerPt(), 'white', 1400); }
         await sleep(1100);
         break;
+      }
       default: break;
     }
   }
 
   /* ---------- sync from the host ---------- */
   function onSync(msg) {
+    if (msg.view) msg.view._at = Date.now();
     queue = queue.then(() => applySync(msg)).catch((e) => { console.error(e); animating = false; });
   }
 
@@ -588,6 +812,7 @@
     if (!msg.view) {
       V = null;
       wasMyTurn = false;
+      clearTimerFx();
       $('roundOver').hidden = true;
       closePicker();
       renderLobby();
@@ -606,11 +831,11 @@
       return;
     }
     animating = true;
+    clearTimerFx();
     handEl.classList.remove('myturn');
     for (const el of handEls.values()) el.classList.remove('ok');
     deckEl.classList.remove('can', 'nudge');
-    const st = $('status');
-    if (st.classList.contains('mine')) { st.textContent = ''; st.classList.remove('mine'); }
+    if (statusEl.classList.contains('mine')) { $('statusText').textContent = ''; statusEl.classList.remove('mine'); statusEl.classList.add('empty'); }
     try {
       for (const ev of evs) await playEvent(ev, v);
     } finally {
@@ -624,10 +849,19 @@
   function inviteUrl(code) {
     return location.origin + location.pathname + '?room=' + code + (Net.local ? '&local=1' : '');
   }
+  const MODE_NOTE = {
+    classic: () => 'Play round after round. The scoreboard keeps a running total, and you stop when you like.',
+    timed: (o) => `<b>${o.minutes} minute match.</b> Win a round to collect the points in everyone's leftover cards. When the clock runs out, the lightest hand takes the last pot and the highest total wins.`,
+    ruthless: () => 'Draw cards always stack. Nothing to play? Keep drawing until something fits. <b>Wild +6</b> and <b>Hop all</b> join the deck, and holding <b>15 cards</b> knocks you out of the round.',
+  };
   function renderLobby() {
     const L = lobby;
+    const o = L.opts;
+    $('lobbyTitle').textContent = L.solo ? 'Practice table' : 'Room';
+    $('codeCard').hidden = L.solo;
+    $('lobbyHint').hidden = L.solo;
     $('lobbyCode').textContent = L.code;
-    if (qrFor !== L.code) {
+    if (!L.solo && qrFor !== L.code) {
       qrFor = L.code;
       try {
         const qr = self.qrcode(0, 'M');
@@ -636,23 +870,40 @@
         $('lobbyQr').innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
       } catch (e) { $('lobbyQr').textContent = ''; }
     }
+    for (const b of $('modes').children) {
+      b.setAttribute('aria-checked', String(b.dataset.mode === o.mode));
+      b.disabled = !L.isHost;
+    }
+    let note = MODE_NOTE[o.mode](o);
+    if (!L.isHost) {
+      const bits = [o.turn ? `${o.turn}s per turn` : 'no turn timer'];
+      if (o.mode !== 'ruthless') bits.push(o.stack ? 'stacking on' : 'stacking off');
+      note += ' <b>' + bits.join(' · ') + '.</b>';
+    }
+    $('modeNote').innerHTML = note;
+    $('hostControls').hidden = !L.isHost;
+    $('rowMinutes').hidden = o.mode !== 'timed';
+    $('rowStack').hidden = o.mode === 'ruthless';
+    for (const group of document.querySelectorAll('.chips')) {
+      for (const b of group.children) b.setAttribute('aria-pressed', String(Number(b.dataset.v) === o[group.dataset.opt]));
+    }
+    $('optStack').checked = !!o.stack;
     $('lobbyCount').textContent = `${L.players.length} / ${L.max}`;
     $('lobbyPlayers').innerHTML = L.players.map((p, i) => {
       const tags = [];
       if (i === L.you) tags.push('<span class="ptag you">You</span>');
-      if (p.host) tags.push('<span class="ptag">Host</span>');
+      if (p.host && !L.solo) tags.push('<span class="ptag">Host</span>');
       if (p.bot) tags.push('<span class="ptag">Computer</span>');
       if (p.waiting) tags.push('<span class="ptag">Next round</span>');
       const kick = L.isHost && !p.host ? `<button class="kick" data-kick="${i}" aria-label="Remove ${esc(p.name)}">✕</button>` : '';
-      return `<li class="${p.connected ? '' : 'off'}"><div class="avatar" style="--av:${AVATARS[i % AVATARS.length]}">${esc((p.name[0] || '?').toUpperCase())}</div><span class="pname">${esc(p.name)}</span>${tags.join('')}${kick}</li>`;
+      return `<li class="${p.connected ? '' : 'off'}"><div class="avatar">${esc(p.av || '🙂')}</div><span class="pname">${esc(p.name)}</span>${tags.join('')}${kick}</li>`;
     }).join('');
-    $('hostControls').hidden = !L.isHost;
+    $('btnAddBot').hidden = !L.isHost;
     $('btnAddBot').disabled = L.players.length >= L.max;
-    $('optStack').checked = !!L.opts.stack;
     const start = $('btnStart');
     start.hidden = !L.isHost;
     start.disabled = L.players.length < 2;
-    start.textContent = L.players.length < 2 ? 'Waiting for players…' : `Start game · ${L.players.length} players`;
+    start.textContent = L.players.length < 2 ? 'Waiting for players…' : `Start ${MODE_NAME[o.mode]} · ${L.players.length} players`;
     const wait = $('lobbyWait');
     wait.hidden = L.isHost;
     wait.textContent = L.running ? "A round is on. You're in the next one!" : 'Waiting for the host to start…';
@@ -679,11 +930,12 @@
   }
   function goHome(message) {
     if (session) { const s = session; session = null; s.leave(); }
-    lobby = null; V = null; wasMyTurn = false; animating = false;
+    lobby = null; V = null; wasMyTurn = false; animating = false; drag = null;
     queue = Promise.resolve();
+    clearTimerFx();
     handEls.clear(); handInner.innerHTML = ''; pileEl.innerHTML = ''; seatsEl.innerHTML = ''; seatsEl.dataset.key = '';
     fx.innerHTML = '';
-    for (const id of ['roundOver', 'colorPick', 'confirmLeave', 'netStatus']) $(id).hidden = true;
+    for (const id of ['roundOver', 'colorPick', 'confirmLeave', 'netStatus', 'reactBar', 'clock']) $(id).hidden = true;
     setUrl(null);
     busy(false);
     $('homeMsg').textContent = message || '';
@@ -700,7 +952,7 @@
     Sfx.unlock();
     busy(true);
     $('homeMsg').textContent = snapshot ? 'Reopening your room…' : 'Opening a room…';
-    session = new HostRoom({ name: myName(), pid, snapshot, onSync, onError: fatal });
+    session = new HostRoom({ name: myName(), av: myAv, pid, snapshot, onSync, onReact: showReact, onError: fatal });
     const s = session;
     s.open(() => { if (session === s) { setUrl(s.code); $('homeMsg').textContent = ''; } });
   }
@@ -711,7 +963,7 @@
     busy(true);
     $('homeMsg').textContent = 'Joining ' + code + '…';
     session = new GuestClient({
-      code, name: myName(), pid, onSync, onError: fatal,
+      code, name: myName(), av: myAv, pid, onSync, onReact: showReact, onError: fatal,
       onStatus: (text) => { const el = $('netStatus'); el.hidden = !text; el.textContent = text || ''; },
       onErrMsg: (m) => { toast(m); Sfx.play('nope'); },
     });
@@ -720,7 +972,7 @@
   }
   function playSolo() {
     Sfx.unlock();
-    session = new HostRoom({ name: myName(), pid, solo: true, onSync, onError: fatal });
+    session = new HostRoom({ name: myName(), av: myAv, pid, solo: true, onSync, onReact: showReact, onError: fatal });
     session.open();
   }
 
@@ -731,25 +983,93 @@
     if (r && r.ok === false) { toast(r.err); Sfx.play('nope'); }
   }
 
-  /* ---------- input ---------- */
+  /* ---------- input: the hand ---------- */
   function closePicker() { $('colorPick').hidden = true; pendingWild = null; }
+  const myTurnNow = () => !!V && !animating && V.phase === 'play' && V.turn === V.you;
+  function nope(el) {
+    el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake');
+    Sfx.play('nope');
+  }
+  function tryPlay(id, el) {
+    const card = V && V.hand.find((c) => c.id === id);
+    if (!card || animating) return false;
+    if (!el.classList.contains('ok')) { if (myTurnNow()) nope(el); return false; }
+    if (card.c === 'w') { pendingWild = id; $('colorPick').hidden = false; return false; }
+    send({ type: 'play', cardId: id });
+    return true;
+  }
+  const overTable = (y) => y < handEl.getBoundingClientRect().top + 14;
 
-  handInner.addEventListener('click', (e) => {
+  handInner.addEventListener('pointerdown', (e) => {
+    if (drag || !V || (e.pointerType === 'mouse' && e.button !== 0)) return;
     const el = e.target.closest('.card');
-    if (!el || !V || animating) return;
-    const id = Number(el.dataset.id);
-    const card = V.hand.find((c) => c.id === id);
-    if (!card) return;
-    if (!el.classList.contains('ok')) {
-      if (V.phase === 'play' && V.turn === V.you) {
-        el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake');
-        Sfx.play('nope');
+    if (!el) return;
+    drag = { pid: e.pointerId, id: Number(el.dataset.id), el, x0: e.clientX, y0: e.clientY, ax: e.clientX, moved: false, lifted: false };
+    try { handInner.setPointerCapture(e.pointerId); } catch (err) { /* noop */ }
+    el.classList.add('peek');
+  });
+  handInner.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.pid) return;
+    const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
+    if (!drag.moved && Math.hypot(dx, dy) > 9) drag.moved = true;
+    if (!drag.moved) return;
+    if (!drag.lifted) {
+      if (dy < -cardW() * 0.42 && Math.abs(dy) > Math.abs(e.clientX - drag.ax) * 0.6) {
+        // pulled up out of the fan: now it follows the finger
+        drag.lifted = true;
+        drag.ax = e.clientX;
+        drag.el.classList.remove('peek');
+        drag.el.classList.add('drag');
+        Sfx.play('lift');
+      } else {
+        // sliding along the fan: lift whichever card is under the finger
+        const id = cardAt(e.clientX, e.clientY);
+        const el = id != null && handEls.get(id);
+        if (el && id !== drag.id) {
+          drag.el.classList.remove('peek');
+          drag.id = id; drag.el = el; drag.ax = e.clientX;
+          el.classList.add('peek');
+          Sfx.play('lift');
+        }
+      }
+    }
+    if (drag.lifted) {
+      const gx = e.clientX - drag.ax, gy = dy;
+      drag.el.style.setProperty('--gx', gx.toFixed(1) + 'px');
+      drag.el.style.setProperty('--gy', gy.toFixed(1) + 'px');
+      drag.el.style.setProperty('--gr', clamp(gx * 0.05, -10, 10).toFixed(1) + 'deg');
+      const hot = overTable(e.clientY) && drag.el.classList.contains('ok');
+      drag.el.classList.toggle('over', hot);
+      pileEl.classList.toggle('drop', hot);
+    }
+  });
+  function endDrag(e, cancelled) {
+    if (!drag || e.pointerId !== drag.pid) return;
+    const d = drag;
+    drag = null;
+    pileEl.classList.remove('drop');
+    const el = d.el;
+    el.classList.remove('peek', 'over');
+    if (cancelled) { el.classList.remove('drag'); return; }
+    if (d.lifted) {
+      const card = V && V.hand.find((c) => c.id === d.id);
+      const wild = card && card.c === 'w';
+      if (overTable(e.clientY) && !wild && tryPlay(d.id, el)) {
+        // it stays where it was dropped until the throw lands on the pile
+        setTimeout(() => { if (el.isConnected) el.classList.remove('drag'); }, 1500);
+      } else {
+        el.classList.remove('drag');
+        if (overTable(e.clientY) && wild) tryPlay(d.id, el);
       }
       return;
     }
-    if (card.c === 'w') { pendingWild = id; $('colorPick').hidden = false; return; }
-    send({ type: 'play', cardId: id });
-  });
+    if (!d.moved) tryPlay(d.id, el);
+  }
+  handInner.addEventListener('pointerup', (e) => endDrag(e, false));
+  handInner.addEventListener('pointercancel', (e) => endDrag(e, true));
+  handInner.addEventListener('lostpointercapture', (e) => endDrag(e, true));
+  handInner.addEventListener('contextmenu', (e) => e.preventDefault());
+
   $('colorPick').addEventListener('click', (e) => {
     const b = e.target.closest('.pick');
     if (b && pendingWild != null) {
@@ -763,6 +1083,48 @@
   $('btnCall').addEventListener('click', () => send({ type: 'call' }));
   $('btnCatch').addEventListener('click', () => send({ type: 'catch' }));
 
+  /* ---------- input: reactions ---------- */
+  const reactBar = $('reactBar');
+  REACTIONS.forEach((e) => {
+    const b = document.createElement('button');
+    b.textContent = e;
+    b.dataset.e = e;
+    b.setAttribute('aria-label', 'React ' + e);
+    reactBar.append(b);
+  });
+  function toggleReact(open) {
+    reactBar.hidden = !open;
+    $('btnReact').setAttribute('aria-expanded', String(open));
+  }
+  $('btnReact').addEventListener('click', (e) => { e.stopPropagation(); toggleReact(reactBar.hidden); });
+  reactBar.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b || !session) return;
+    session.myReact(b.dataset.e);
+    toggleReact(false);
+  });
+  document.addEventListener('pointerdown', (e) => { if (!reactBar.hidden && !e.target.closest('#reactBar, #btnReact')) toggleReact(false); });
+
+  /* ---------- input: home + lobby ---------- */
+  const avPick = $('avPick');
+  AVATARS.forEach((a) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = a;
+    b.dataset.av = a;
+    b.setAttribute('role', 'radio');
+    b.setAttribute('aria-checked', String(a === myAv));
+    avPick.append(b);
+  });
+  avPick.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    myAv = b.dataset.av;
+    store.set('ekka.av', myAv);
+    for (const x of avPick.children) x.setAttribute('aria-checked', String(x === b));
+    Sfx.play('pop');
+  });
+
   $('btnCreate').addEventListener('click', () => createRoom(null));
   $('btnJoin').addEventListener('click', () => joinRoom($('codeInput').value));
   $('btnSolo').addEventListener('click', playSolo);
@@ -772,6 +1134,14 @@
 
   $('btnLobbyLeave').addEventListener('click', () => goHome());
   $('btnAddBot').addEventListener('click', () => session && session.cmd({ type: 'addBot' }));
+  $('modes').addEventListener('click', (e) => {
+    const b = e.target.closest('.mode');
+    if (b && session && !b.disabled) { session.cmd({ type: 'opt', key: 'mode', value: b.dataset.mode }); Sfx.play('pop'); }
+  });
+  $('hostControls').addEventListener('click', (e) => {
+    const b = e.target.closest('.chips button');
+    if (b && session) session.cmd({ type: 'opt', key: b.parentElement.dataset.opt, value: Number(b.dataset.v) });
+  });
   $('optStack').addEventListener('change', (e) => session && session.cmd({ type: 'opt', key: 'stack', value: e.target.checked }));
   $('lobbyPlayers').addEventListener('click', (e) => {
     const b = e.target.closest('[data-kick]');
@@ -820,6 +1190,8 @@
   soundIcon();
 
   addEventListener('resize', () => { if (V && app.dataset.screen === 'table') { placeSeats(); layoutHand(); } });
+  // the table shrinks and grows with the hand (one row or two): keep the seats on the rim
+  if (self.ResizeObserver) new ResizeObserver(() => { if (V && app.dataset.screen === 'table') placeSeats(); }).observe($('arena'));
   addEventListener('pagehide', () => {
     // guests tell the host straight away; a host keeps its snapshot so a refresh reopens the room
     if (session && !session.isHost && session.conn) { try { session.conn.send({ t: 'ping' }); } catch (e) { /* noop */ } }
@@ -828,10 +1200,10 @@
   /* ---------- boot ---------- */
   (function boot() {
     const hero = $('heroCards');
-    [{ id: 900, c: 'c', v: '7' }, { id: 901, c: 'm', v: 'skip' }, { id: 902, c: 't', v: 'd2' }, { id: 903, c: 'w', v: 'wild' }]
+    [{ id: 900, c: 'r', v: '7' }, { id: 901, c: 'y', v: 'skip' }, { id: 902, c: 'g', v: 'd2' }, { id: 903, c: 'w', v: 'wild' }]
       .forEach((c) => hero.append(makeCard(c)));
     const drift = $('drift');
-    const samples = [['c', '3'], ['v', 'rev'], ['m', '8'], ['w', 'wild'], ['t', 'skip'], ['c', 'd2'], ['v', '5'], ['t', '0']];
+    const samples = [['r', '3'], ['b', 'rev'], ['y', '8'], ['w', 'wild'], ['g', 'skip'], ['r', 'd2'], ['b', '5'], ['g', '0']];
     samples.forEach(([c, v], i) => {
       const el = makeCard({ id: 950 + i, c, v });
       el.style.setProperty('--l', (4 + ((i * 29) % 88)) + '%');
@@ -843,8 +1215,7 @@
       el.style.setProperty('--dx', ((i * 31) % 120) - 60 + 'px');
       drift.append(el);
     });
-    const back = makeBack();
-    $('deck').querySelector('.deck-stack').append(makeBack(), makeBack(), back);
+    $('deck').querySelector('.deck-stack').append(makeBack(), makeBack(), makeBack());
 
     $('nameInput').value = store.get('ekka.name') || '';
     const room = (new URL(location.href).searchParams.get('room') || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
@@ -858,5 +1229,8 @@
     }
   })();
 
-  self.__ekka = { get V() { return V; }, get lobby() { return lobby; }, get session() { return session; }, get animating() { return animating; } };
+  self.__ekka = {
+    get V() { return V; }, get lobby() { return lobby; }, get session() { return session; }, get animating() { return animating; },
+    makeCard, makeBack,
+  };
 })();
