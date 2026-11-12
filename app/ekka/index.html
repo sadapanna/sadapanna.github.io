@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Ekka — Free Multiplayer Colour Card Game for Your Living Room | Sadapanna</title>
+<meta name="description" content="Ekka is a free colour-and-number card game you play in the browser. Open a room, share the four-letter code, and everyone on the wifi joins from their own phone. No app, no sign-up, no ads.">
+<link rel="canonical" href="https://sadapanna.com/app/ekka/">
+<meta name="robots" content="index, follow">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sadapanna">
+<meta property="og:title" content="Ekka — the shout-it-out card game, one room, everyone's phone">
+<meta property="og:description" content="Match the colour or the number, drop your last card first, and don't forget to shout Ekka. Free in the browser: create a room, share the code, play.">
+<meta property="og:url" content="https://sadapanna.com/app/ekka/">
+<meta property="og:image" content="https://sadapanna.com/assets/brand/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://sadapanna.com/assets/brand/og-image.png">
+<meta name="twitter:title" content="Ekka — the shout-it-out card game">
+<meta name="twitter:description" content="A free multiplayer colour card game in the browser. Create a room, share the code, play from your phones.">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Ekka",
+  "url": "https://sadapanna.com/app/ekka/",
+  "genre": "Card game",
+  "gamePlatform": "Web browser",
+  "playMode": ["MultiPlayer", "SinglePlayer"],
+  "numberOfPlayers": { "@type": "QuantitativeValue", "minValue": 1, "maxValue": 8 },
+  "applicationCategory": "GameApplication",
+  "operatingSystem": "Any (runs in browser)",
+  "description": "Ekka is a free colour-and-number shedding card game for two to eight players. One person opens a room and shares a four-letter code; everyone else joins from their own phone or laptop. Hands stay private on each screen, and the devices talk to each other directly.",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "publisher": { "@type": "Organization", "name": "Sadapanna", "url": "https://sadapanna.com/" }
+}
+</script>
+<meta name="theme-color" content="#2a1d6e">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css?v=2">
+</head>
+<body>
+<div id="app" data-screen="home">
+
+  <!-- ============ HOME ============ -->
+  <section id="home" class="screen">
+    <div class="drift" id="drift" aria-hidden="true"></div>
+    <a class="home-back" href="/">← sadapanna.com</a>
+    <div class="hero">
+      <div class="hero-cards" id="heroCards" aria-hidden="true"></div>
+      <h1 class="logo">Ekka<span class="logo-bang">!</span></h1>
+      <p class="tag">Match the colour, dump your cards, shout before they catch you.</p>
+    </div>
+
+    <div class="panel">
+      <label class="field">
+        <span>Your name</span>
+        <input id="nameInput" type="text" maxlength="14" autocomplete="nickname" placeholder="e.g. Rohit" enterkeyhint="done">
+      </label>
+      <button id="btnCreate" class="btn btn-yellow">Create a room</button>
+      <div class="join-row">
+        <input id="codeInput" type="text" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Room code">
+        <button id="btnJoin" class="btn btn-light">Join room</button>
+      </div>
+      <div class="or"><span>or</span></div>
+      <button id="btnSolo" class="btn btn-ghost">Play the computer</button>
+      <p id="homeMsg" class="home-msg" role="status"></p>
+    </div>
+
+    <details class="rules">
+      <summary>How to play</summary>
+      <div class="rules-body">
+        <p><strong>Goal:</strong> be the first to get rid of all your cards.</p>
+        <ul>
+          <li>On your turn, play a card that matches the top card's <strong>colour</strong> or its <strong>number / symbol</strong>.</li>
+          <li>Nothing to play? Tap the deck to draw one. If it fits, you may play it straight away.</li>
+          <li><strong>Hop</strong> skips the next player. <strong>Flip</strong> reverses the direction. <strong>+2</strong> makes the next player draw two and miss a turn.</li>
+          <li><strong>Wild</strong> lets you pick the colour. <strong>Wild +4</strong> does that and hands the next player four cards.</li>
+          <li>Down to one card? Hit <strong>Ekka!</strong> If someone taps <strong>Catch</strong> before you do, you draw two.</li>
+        </ul>
+        <p><strong>Playing together:</strong> one person creates a room and shares the code (or the QR). Everyone joins on their own phone. It works best when you are on the same wifi, and each hand stays private on its own screen.</p>
+      </div>
+    </details>
+    <p class="fineprint">No accounts, no ads. Your devices talk to each other directly; a matchmaking server only introduces them by room code.</p>
+  </section>
+
+  <!-- ============ LOBBY ============ -->
+  <section id="lobby" class="screen">
+    <header class="bar">
+      <button class="icon-btn" id="btnLobbyLeave" aria-label="Leave room">←</button>
+      <span class="bar-title">Room</span>
+      <span class="bar-spacer"></span>
+    </header>
+    <div class="lobby-body">
+      <div class="code-card">
+        <div class="code-left">
+          <span class="code-label">Room code</span>
+          <span class="code" id="lobbyCode">····</span>
+          <div class="code-actions">
+            <button class="btn btn-light btn-sm" id="btnShare">Share invite</button>
+            <button class="btn btn-ghost btn-sm" id="btnCopy">Copy link</button>
+          </div>
+        </div>
+        <div class="qr" id="lobbyQr" aria-label="QR code to join this room"></div>
+      </div>
+      <p class="lobby-hint" id="lobbyHint">Friends open <b>sadapanna.com/app/ekka</b> and type the code, or scan the QR.</p>
+
+      <h2 class="lobby-h">Players <span id="lobbyCount"></span></h2>
+      <ul class="plist" id="lobbyPlayers"></ul>
+
+      <div class="host-only" id="hostControls">
+        <button class="btn btn-ghost btn-sm" id="btnAddBot">+ Add a computer player</button>
+        <label class="toggle">
+          <input type="checkbox" id="optStack">
+          <span class="toggle-ui" aria-hidden="true"></span>
+          <span>Stacking: answer a +2 / +4 with your own</span>
+        </label>
+      </div>
+    </div>
+    <footer class="lobby-foot">
+      <button class="btn btn-yellow" id="btnStart">Start game</button>
+      <p class="lobby-wait" id="lobbyWait">Waiting for the host to start…</p>
+    </footer>
+  </section>
+
+  <!-- ============ TABLE ============ -->
+  <section id="table" class="screen">
+    <header class="bar bar-table">
+      <button class="icon-btn" id="btnLeave" aria-label="Leave game">✕</button>
+      <span class="bar-title" id="tableCode"></span>
+      <span class="bar-spacer"></span>
+      <button class="icon-btn" id="btnSound" aria-label="Toggle sound">🔊</button>
+    </header>
+
+    <div class="arena" id="arena">
+      <div class="felt" id="felt"><div class="stitch"></div></div>
+      <div class="center" id="center">
+        <svg class="ring" id="ring" viewBox="0 0 200 200" aria-hidden="true">
+          <g fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round">
+            <path d="M 14 100 A 86 86 0 0 1 148 28.500"/>
+            <path d="M 186 100 A 86 86 0 0 1 52 171.500"/>
+          </g>
+          <g fill="currentColor">
+            <path d="M 160 38 L 141 35.500 L 152 20 Z"/>
+            <path d="M 40 162 L 59 164.500 L 48 180 Z"/>
+          </g>
+        </svg>
+        <div class="piles">
+          <button class="deck" id="deck" aria-label="Draw a card">
+            <span class="deck-stack"></span>
+            <span class="deck-hint" id="deckHint">Draw</span>
+          </button>
+          <div class="pile" id="pile"></div>
+        </div>
+        <div class="pending" id="pending" hidden></div>
+        <div class="color-chip" id="colorChip"><i></i><span></span></div>
+      </div>
+      <div class="seats" id="seats"></div>
+      <div class="status" id="status" role="status" aria-live="polite"></div>
+    </div>
+
+    <div class="me">
+      <div class="actions">
+        <button class="btn btn-catch" id="btnCatch" hidden>Catch!</button>
+        <button class="btn btn-light btn-sm" id="btnPass" hidden>Keep it &amp; pass</button>
+        <button class="btn btn-ekka" id="btnCall" hidden>Ekka!</button>
+      </div>
+      <div class="hand" id="hand"><div class="hand-inner" id="handInner"></div></div>
+    </div>
+  </section>
+</div>
+
+<!-- overlays -->
+<div class="overlay" id="colorPick" hidden>
+  <div class="pick-box">
+    <p class="pick-title">Pick a colour</p>
+    <div class="pick-grid">
+      <button data-c="c" class="pick pc-c"><i></i>Coral</button>
+      <button data-c="m" class="pick pc-m"><i></i>Mango</button>
+      <button data-c="t" class="pick pc-t"><i></i>Teal</button>
+      <button data-c="v" class="pick pc-v"><i></i>Violet</button>
+    </div>
+    <button class="btn btn-ghost btn-sm" id="pickCancel">Cancel</button>
+  </div>
+</div>
+
+<div class="overlay" id="roundOver" hidden>
+  <div class="over-box">
+    <p class="over-kicker" id="overKicker">Round 1</p>
+    <h2 class="over-title" id="overTitle"></h2>
+    <p class="over-sub" id="overSub"></p>
+    <table class="scores" id="overScores"></table>
+    <div class="over-actions">
+      <button class="btn btn-yellow" id="btnNext">Next round</button>
+      <button class="btn btn-ghost btn-sm" id="btnToLobby">Back to the room</button>
+      <p class="lobby-wait" id="overWait">Waiting for the host…</p>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="confirmLeave" hidden>
+  <div class="over-box small">
+    <h2 class="over-title">Leave the game?</h2>
+    <p class="over-sub" id="confirmText"></p>
+    <div class="over-actions">
+      <button class="btn btn-yellow" id="btnStay">Keep playing</button>
+      <button class="btn btn-ghost btn-sm" id="btnReallyLeave">Leave</button>
+    </div>
+  </div>
+</div>
+
+<div id="fx" aria-hidden="true"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="netStatus" hidden></div>
+
+<script src="vendor/peerjs.min.js"></script>
+<script src="vendor/qrcode.js"></script>
+<script src="js/engine.js?v=1"></script>
+<script src="js/net.js?v=1"></script>
+<script src="js/room.js?v=2"></script>
+<script src="js/sfx.js?v=1"></script>
+<script src="js/ui.js?v=2"></script>
+</body>
+</html>
